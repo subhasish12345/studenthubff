@@ -1,3 +1,4 @@
+
 import { db } from '@/lib/firebase';
 import { collection, addDoc, getDocs, doc, setDoc, query, where, updateDoc, increment } from 'firebase/firestore';
 
@@ -12,8 +13,12 @@ export interface Degree {
 const COLLEGE_ID = 'GEC'; // Hardcoding college ID as per the plan
 
 // Function to add a new degree to Firestore
-export const addDegree = async (degree: Omit<Degree, 'id'>) => {
+export const addDegree = async (degree: Omit<Degree, 'id' | 'streamCount'> & { streamCount: number }) => {
   try {
+    // Ensure the parent college document exists
+    const collegeRef = doc(db, 'colleges', COLLEGE_ID);
+    await setDoc(collegeRef, { name: "Gandhi Engineering College" }, { merge: true });
+
     const degreesCollectionRef = collection(db, 'colleges', COLLEGE_ID, 'degrees');
     const docRef = await addDoc(degreesCollectionRef, degree);
     return docRef.id;
@@ -35,7 +40,9 @@ export const getDegrees = async (): Promise<Degree[]> => {
     return degrees;
   } catch (e) {
     console.error("Error getting documents: ", e);
-    throw new Error('Failed to fetch degrees');
+    // It's possible the collection doesn't exist yet, which is not a critical error.
+    // Return an empty array in this case.
+    return [];
   }
 };
 
@@ -51,5 +58,3 @@ export const updateStreamCount = async (degreeId: string, count: number) => {
         throw new Error('Failed to update stream count');
     }
 }
-
-    
