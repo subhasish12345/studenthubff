@@ -121,10 +121,16 @@ function ManageStreamsDialog({ degree, onStreamAdded }: { degree: Degree, onStre
     const [open, setOpen] = useState(false);
 
     const fetchStreams = async () => {
+        if (!degree.id) return;
         setIsFetchingStreams(true);
-        const streamsData = await getStreams(degree.id);
-        setStreams(streamsData);
-        setIsFetchingStreams(false);
+        try {
+            const streamsData = await getStreams(degree.id);
+            setStreams(streamsData);
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not fetch streams.'})
+        } finally {
+            setIsFetchingStreams(false);
+        }
     }
 
     useEffect(() => {
@@ -381,5 +387,6 @@ export default function AdminPage() {
             </Tabs>
         </div>
     );
+}
 
     

@@ -9,10 +9,13 @@ export interface Degree {
   streamCount: number; 
 }
 
+const COLLEGE_ID = 'GEC'; // Hardcoding college ID as per the plan
+
 // Function to add a new degree to Firestore
 export const addDegree = async (degree: Omit<Degree, 'id'>) => {
   try {
-    const docRef = await addDoc(collection(db, 'degrees'), degree);
+    const degreesCollectionRef = collection(db, 'colleges', COLLEGE_ID, 'degrees');
+    const docRef = await addDoc(degreesCollectionRef, degree);
     return docRef.id;
   } catch (e) {
     console.error("Error adding document: ", e);
@@ -23,7 +26,8 @@ export const addDegree = async (degree: Omit<Degree, 'id'>) => {
 // Function to get all degrees from Firestore
 export const getDegrees = async (): Promise<Degree[]> => {
   try {
-    const querySnapshot = await getDocs(collection(db, 'degrees'));
+    const degreesCollectionRef = collection(db, 'colleges', COLLEGE_ID, 'degrees');
+    const querySnapshot = await getDocs(degreesCollectionRef);
     const degrees: Degree[] = [];
     querySnapshot.forEach((doc) => {
       degrees.push({ id: doc.id, ...doc.data() } as Degree);
@@ -38,7 +42,7 @@ export const getDegrees = async (): Promise<Degree[]> => {
 // Function to update the stream count for a degree
 export const updateStreamCount = async (degreeId: string, count: number) => {
     try {
-        const degreeRef = doc(db, 'degrees', degreeId);
+        const degreeRef = doc(db, 'colleges', COLLEGE_ID, 'degrees', degreeId);
         await updateDoc(degreeRef, {
             streamCount: increment(count)
         });
@@ -47,3 +51,5 @@ export const updateStreamCount = async (degreeId: string, count: number) => {
         throw new Error('Failed to update stream count');
     }
 }
+
+    

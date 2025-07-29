@@ -8,10 +8,12 @@ export interface Stream {
   name: string;
 }
 
+const COLLEGE_ID = 'GEC'; // Hardcoding college ID as per the plan
+
 // Function to add a new stream to a degree's subcollection
 export const addStream = async (degreeId: string, stream: Omit<Stream, 'id'>) => {
   try {
-    const streamCollectionRef = collection(db, 'degrees', degreeId, 'streams');
+    const streamCollectionRef = collection(db, 'colleges', COLLEGE_ID, 'degrees', degreeId, 'streams');
     const docRef = await addDoc(streamCollectionRef, stream);
     
     // Increment the stream count in the parent degree document
@@ -27,7 +29,7 @@ export const addStream = async (degreeId: string, stream: Omit<Stream, 'id'>) =>
 // Function to get all streams for a specific degree
 export const getStreams = async (degreeId: string): Promise<Stream[]> => {
   try {
-    const streamCollectionRef = collection(db, 'degrees', degreeId, 'streams');
+    const streamCollectionRef = collection(db, 'colleges', COLLEGE_ID, 'degrees', degreeId, 'streams');
     const querySnapshot = await getDocs(streamCollectionRef);
     const streams: Stream[] = [];
     querySnapshot.forEach((doc) => {
@@ -39,3 +41,5 @@ export const getStreams = async (degreeId: string): Promise<Stream[]> => {
     throw new Error('Failed to fetch streams');
   }
 };
+
+    
