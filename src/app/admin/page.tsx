@@ -26,6 +26,7 @@ function AddDegreeDialog({ onDegreeAdded }: { onDegreeAdded: () => void }) {
     const [duration, setDuration] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const { toast } = useToast();
+    const [open, setOpen] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -38,6 +39,9 @@ function AddDegreeDialog({ onDegreeAdded }: { onDegreeAdded: () => void }) {
             await addDegree({ name, duration: parseInt(duration, 10), streams: 0 });
             toast({ title: 'Success', description: 'Degree added successfully.' });
             onDegreeAdded();
+            setOpen(false); // Close the dialog on success
+            setName('');
+            setDuration('');
         } catch (error) {
             toast({ variant: 'destructive', title: 'Error', description: 'Failed to add degree.' });
         } finally {
@@ -46,7 +50,7 @@ function AddDegreeDialog({ onDegreeAdded }: { onDegreeAdded: () => void }) {
     };
 
     return (
-        <Dialog>
+        <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
                 <Button>
                     <PlusCircle className="mr-2 h-4 w-4" />
@@ -136,7 +140,12 @@ export default function AdminPage() {
                                 <TableBody>
                                     {isLoadingDegrees ? (
                                         <TableRow>
-                                            <TableCell colSpan={4} className="text-center">Loading degrees...</TableCell>
+                                            <TableCell colSpan={4} className="text-center">
+                                                <div className="flex justify-center items-center">
+                                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                    Loading degrees...
+                                                </div>
+                                            </TableCell>
                                         </TableRow>
                                     ) : degrees.length > 0 ? (
                                         degrees.map((degree) => (
