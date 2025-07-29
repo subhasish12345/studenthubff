@@ -8,7 +8,9 @@ import {
   signInWithEmailAndPassword, 
   signOut,
   GoogleAuthProvider,
-  signInWithPopup
+  signInWithPopup,
+  setPersistence,
+  browserLocalPersistence
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
@@ -38,6 +40,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
   
   const signUp = async (email: string, password: string) => {
+    await setPersistence(auth, browserLocalPersistence);
     return createUserWithEmailAndPassword(auth, email, password);
   }
 
@@ -47,6 +50,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   
   const logInWithGoogle = () => {
     const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({
+      'login_hint': 'user@example.com'
+    });
+    // Explicitly setting the authDomain can solve configuration issues.
+    auth.tenantId = auth.app.options.authDomain;
     return signInWithPopup(auth, provider);
   }
 
