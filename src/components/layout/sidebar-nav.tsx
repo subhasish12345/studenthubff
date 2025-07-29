@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { SidebarMenu, SidebarMenuItem, SidebarMenuButton } from "@/components/ui/sidebar";
-import { LayoutDashboard, Timer, ClipboardList, Bell, CalendarDays, Folder, FileText } from "lucide-react";
+import { LayoutDashboard, Timer, ClipboardList, Bell, CalendarDays, Folder, FileText, LogIn } from "lucide-react";
 import Link from "next/link";
 
 const navItems = [
@@ -13,6 +13,7 @@ const navItems = [
   { href: "/events", label: "Events", icon: CalendarDays },
   { href: "/resources", label: "Resources", icon: Folder },
   { href: "/resume-builder", label: "AI Resume Builder", icon: FileText },
+  { href: "/login", label: "Login", icon: LogIn },
 ];
 
 export function SidebarNav() {
