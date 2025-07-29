@@ -26,7 +26,7 @@ export function SidebarNav() {
     <SidebarMenu>
       {displayedNavItems.map((item) => (
         <SidebarMenuItem key={item.href}>
-          <Link href={item.href} passHref legacyBehavior>
+          <Link href={item.href}>
             <SidebarMenuButton
               as="a"
               isActive={pathname === item.href}
@@ -48,7 +48,7 @@ export function SidebarNav() {
             <span>Logout</span>
           </SidebarMenuButton>
         ) : (
-          <Link href="/login" passHref legacyBehavior>
+          <Link href="/login">
             <SidebarMenuButton
               as="a"
               isActive={pathname === "/login"}
