@@ -20,7 +20,7 @@ import {
 import { useAuth } from "@/hooks/use-auth"
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 const GoogleIcon = (props: any) => (
   <svg viewBox="0 0 48 48" {...props}>
