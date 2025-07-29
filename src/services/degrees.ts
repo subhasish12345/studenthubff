@@ -1,12 +1,12 @@
 import { db } from '@/lib/firebase';
-import { collection, addDoc, getDocs, doc, setDoc, query, where } from 'firebase/firestore';
+import { collection, addDoc, getDocs, doc, setDoc, query, where, updateDoc, increment } from 'firebase/firestore';
 
 // Define the structure of a Degree object
 export interface Degree {
   id: string;
   name: string;
   duration: number;
-  streams: number; // For now, just a count. We will expand this later.
+  streamCount: number; 
 }
 
 // Function to add a new degree to Firestore
@@ -31,6 +31,19 @@ export const getDegrees = async (): Promise<Degree[]> => {
     return degrees;
   } catch (e) {
     console.error("Error getting documents: ", e);
-    return []; // Return empty array on error
+    throw new Error('Failed to fetch degrees');
   }
 };
+
+// Function to update the stream count for a degree
+export const updateStreamCount = async (degreeId: string, count: number) => {
+    try {
+        const degreeRef = doc(db, 'degrees', degreeId);
+        await updateDoc(degreeRef, {
+            streamCount: increment(count)
+        });
+    } catch (e) {
+        console.error("Error updating stream count: ", e);
+        throw new Error('Failed to update stream count');
+    }
+}

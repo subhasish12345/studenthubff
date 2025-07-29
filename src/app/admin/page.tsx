@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -5,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { PlusCircle, MoreHorizontal, Loader2 } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, Loader2, Edit } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -13,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { addDegree, getDegrees, Degree } from '@/services/degrees';
+import { addStream, getStreams, Stream } from '@/services/streams';
 
 
 const teachersData = [
@@ -36,7 +38,7 @@ function AddDegreeDialog({ onDegreeAdded }: { onDegreeAdded: () => void }) {
         }
         setIsLoading(true);
         try {
-            await addDegree({ name, duration: parseInt(duration, 10), streams: 0 });
+            await addDegree({ name, duration: parseInt(duration, 10), streamCount: 0 });
             toast({ title: 'Success', description: 'Degree added successfully.' });
             onDegreeAdded();
             setOpen(false); // Close the dialog on success
@@ -87,6 +89,103 @@ function AddDegreeDialog({ onDegreeAdded }: { onDegreeAdded: () => void }) {
     );
 }
 
+function ManageStreamsDialog({ degree, onStreamAdded }: { degree: Degree, onStreamAdded: () => void }) {
+    const [streamName, setStreamName] = useState('');
+    const [streams, setStreams] = useState<Stream[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [isFetchingStreams, setIsFetchingStreams] = useState(true);
+    const { toast } = useToast();
+    const [open, setOpen] = useState(false);
+
+    const fetchStreams = async () => {
+        setIsFetchingStreams(true);
+        const streamsData = await getStreams(degree.id);
+        setStreams(streamsData);
+        setIsFetchingStreams(false);
+    }
+
+    useEffect(() => {
+        if (open) {
+            fetchStreams();
+        }
+    }, [open, degree.id]);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!streamName) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Stream name cannot be empty.' });
+            return;
+        }
+        setIsLoading(true);
+        try {
+            await addStream(degree.id, { name: streamName });
+            toast({ title: 'Success', description: `Stream "${streamName}" added to ${degree.name}.` });
+            setStreamName('');
+            fetchStreams(); // Refresh stream list
+            onStreamAdded(); // Refresh degree list in parent
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to add stream.' });
+        } finally {
+            setIsLoading(false);
+        }
+    }
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                 <DropdownMenuItem onSelect={(e) => e.preventDefault()}>Manage Streams</DropdownMenuItem>
+            </DialogTrigger>
+            <DialogContent>
+                 <DialogHeader>
+                    <DialogTitle>Manage Streams for {degree.name}</DialogTitle>
+                    <CardDescription>Add or view streams for this degree.</CardDescription>
+                </DialogHeader>
+                <div className="py-4">
+                    <form onSubmit={handleSubmit} className="flex gap-2">
+                        <Input 
+                            value={streamName} 
+                            onChange={(e) => setStreamName(e.target.value)} 
+                            placeholder="e.g. Computer Science" 
+                            disabled={isLoading}
+                        />
+                        <Button type="submit" disabled={isLoading}>
+                            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <PlusCircle className="h-4 w-4" />}
+                            <span className="sr-only sm:not-sr-only sm:ml-2">Add</span>
+                        </Button>
+                    </form>
+                </div>
+                <div>
+                    <h3 className="text-sm font-medium mb-2">Existing Streams</h3>
+                    <div className="border rounded-md max-h-48 overflow-y-auto">
+                        {isFetchingStreams ? (
+                            <div className="p-4 text-center text-muted-foreground">
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin inline" /> Loading...
+                            </div>
+                        ) : streams.length > 0 ? (
+                           <Table>
+                               <TableBody>
+                                    {streams.map(stream => (
+                                        <TableRow key={stream.id}>
+                                            <TableCell>{stream.name}</TableCell>
+                                        </TableRow>
+                                    ))}
+                               </TableBody>
+                           </Table>
+                        ) : (
+                            <p className="p-4 text-center text-muted-foreground">No streams found.</p>
+                        )}
+                    </div>
+                </div>
+                 <DialogFooter>
+                    <DialogClose asChild>
+                        <Button type="button" variant="outline">Close</Button>
+                    </DialogClose>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    )
+}
+
 
 export default function AdminPage() {
     const [degrees, setDegrees] = useState<Degree[]>([]);
@@ -94,9 +193,14 @@ export default function AdminPage() {
 
     const fetchDegrees = async () => {
         setIsLoadingDegrees(true);
-        const degreesData = await getDegrees();
-        setDegrees(degreesData);
-        setIsLoadingDegrees(false);
+        try {
+            const degreesData = await getDegrees();
+            setDegrees(degreesData);
+        } catch (error) {
+            // Handle error, maybe show a toast
+        } finally {
+            setIsLoadingDegrees(false);
+        }
     };
 
     useEffect(() => {
@@ -152,7 +256,7 @@ export default function AdminPage() {
                                             <TableRow key={degree.id}>
                                                 <TableCell className="font-medium">{degree.name}</TableCell>
                                                 <TableCell>{degree.duration} Years</TableCell>
-                                                <TableCell>{degree.streams}</TableCell>
+                                                <TableCell>{degree.streamCount}</TableCell>
                                                 <TableCell>
                                                     <DropdownMenu>
                                                         <DropdownMenuTrigger asChild>
@@ -162,8 +266,8 @@ export default function AdminPage() {
                                                             </Button>
                                                         </DropdownMenuTrigger>
                                                         <DropdownMenuContent align="end">
-                                                            <DropdownMenuItem>Edit</DropdownMenuItem>
-                                                            <DropdownMenuItem>Manage Streams</DropdownMenuItem>
+                                                            <DropdownMenuItem><Edit className="mr-2 h-4 w-4" /> Edit Degree</DropdownMenuItem>
+                                                            <ManageStreamsDialog degree={degree} onStreamAdded={fetchDegrees} />
                                                         </DropdownMenuContent>
                                                     </DropdownMenu>
                                                 </TableCell>
@@ -255,3 +359,4 @@ export default function AdminPage() {
         </div>
     );
 }
+
