@@ -42,10 +42,11 @@ function AddDegreeDialog({ onDegreeAdded }: { onDegreeAdded: () => void }) {
             await addDegree({ name, duration: parseInt(duration, 10), streamCount: 0 });
             toast({ title: 'Success', description: 'Degree added successfully.' });
             onDegreeAdded();
-            setOpen(false); // Close the dialog on success
+            setOpen(false); // This will now correctly close the dialog
             setName('');
             setDuration('');
         } catch (error) {
+            console.error(error);
             toast({ variant: 'destructive', title: 'Error', description: 'Failed to add degree.' });
         } finally {
             setIsLoading(false);
@@ -226,6 +227,7 @@ export default function AdminPage() {
             const degreesData = await getDegrees();
             setDegrees(degreesData);
         } catch (error) {
+            console.error(error);
             // Handle error, maybe show a toast
         } finally {
             setIsLoadingDegrees(false);
@@ -388,3 +390,5 @@ export default function AdminPage() {
         </div>
     );
 }
+
+    
