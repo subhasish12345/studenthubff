@@ -15,6 +15,7 @@ import {
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
+import { useToast } from './use-toast';
 
 type Role = 'student' | 'teacher' | 'admin';
 
@@ -38,6 +39,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [role, setRole] = useState<Role | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const { toast } = useToast();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -70,12 +72,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   
   const logInWithGoogle = () => {
     const provider = new GoogleAuthProvider();
-    provider.setCustomParameters({
-      'login_hint': 'user@example.com'
-    });
-    // Explicitly setting the authDomain can solve configuration issues.
+    // This is a common practice to ensure the auth domain is correctly set.
     if(auth.app.options.authDomain) {
-      auth.tenantId = auth.app.options.authDomain;
+      provider.setCustomParameters({
+        'hd': auth.app.options.authDomain.split('.').slice(-2).join('.')
+      });
     }
     return signInWithPopup(auth, provider);
   }
@@ -105,3 +106,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+    
