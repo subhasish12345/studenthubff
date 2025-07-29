@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { addDegree, getDegrees, Degree } from '@/services/degrees';
 import { addStream, getStreams, Stream } from '@/services/streams';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 
 const teachersData = [
@@ -67,11 +68,33 @@ function AddDegreeDialog({ onDegreeAdded }: { onDegreeAdded: () => void }) {
                     <div className="grid gap-4 py-4">
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="name" className="text-right">Name</Label>
-                            <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. B.Tech" className="col-span-3" />
+                            <Select onValueChange={setName} value={name}>
+                                <SelectTrigger className="col-span-3">
+                                    <SelectValue placeholder="Select a degree" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="B.Tech">B.Tech</SelectItem>
+                                    <SelectItem value="MCA">MCA</SelectItem>
+                                    <SelectItem value="MBA">MBA</SelectItem>
+                                    <SelectItem value="BCA">BCA</SelectItem>
+                                    <SelectItem value="BBA">BBA</SelectItem>
+                                    <SelectItem value="Nursing">Nursing</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="duration" className="text-right">Duration (Years)</Label>
-                            <Input id="duration" type="number" value={duration} onChange={(e) => setDuration(e.target.value)} placeholder="e.g. 4" className="col-span-3" />
+                            <Label htmlFor="duration" className="text-right">Duration</Label>
+                             <Select onValueChange={setDuration} value={duration}>
+                                <SelectTrigger className="col-span-3">
+                                    <SelectValue placeholder="Select duration (years)" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="1">1 Year</SelectItem>
+                                    <SelectItem value="2">2 Years</SelectItem>
+                                    <SelectItem value="3">3 Years</SelectItem>
+                                    <SelectItem value="4">4 Years</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                     </div>
                     <DialogFooter>
@@ -358,5 +381,5 @@ export default function AdminPage() {
             </Tabs>
         </div>
     );
-}
 
+    
