@@ -6,8 +6,11 @@ import { SidebarNav } from "./sidebar-nav";
 import { Button } from "../ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { LogOut, Settings, Bell } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 
 export function MainLayout({ children }: { children: React.ReactNode }) {
+  const { user, logOut } = useAuth();
+
   return (
     <SidebarProvider>
       <Sidebar side="left" variant="sidebar" collapsible="icon">
@@ -25,21 +28,23 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
         <SidebarContent>
           <SidebarNav />
         </SidebarContent>
-        <SidebarFooter>
-          <div className="flex items-center gap-3 p-2 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:justify-center">
-            <Avatar className="group-data-[collapsible=icon]:mb-2">
-              <AvatarImage src="https://placehold.co/100x100" data-ai-hint="user avatar" />
-              <AvatarFallback>AU</AvatarFallback>
-            </Avatar>
-            <div className="flex flex-col group-data-[collapsible=icon]:hidden">
-                <p className="font-semibold text-sidebar-foreground">Alex Turner</p>
-                <p className="text-xs text-sidebar-foreground/70">alex.turner@example.com</p>
+        {user && (
+          <SidebarFooter>
+            <div className="flex items-center gap-3 p-2 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:justify-center">
+              <Avatar className="group-data-[collapsible=icon]:mb-2">
+                <AvatarImage src={user.photoURL ?? 'https://placehold.co/100x100'} data-ai-hint="user avatar" />
+                <AvatarFallback>{user.email?.charAt(0).toUpperCase()}</AvatarFallback>
+              </Avatar>
+              <div className="flex flex-col group-data-[collapsible=icon]:hidden">
+                  <p className="font-semibold text-sidebar-foreground">{user.displayName ?? user.email}</p>
+                  <p className="text-xs text-sidebar-foreground/70">{user.email}</p>
+              </div>
+              <Button variant="ghost" size="icon" onClick={logOut} className="ml-auto text-sidebar-foreground/70 hover:text-sidebar-foreground group-data-[collapsible=icon]:ml-0">
+                  <LogOut size={16}/>
+              </Button>
             </div>
-            <Button variant="ghost" size="icon" className="ml-auto text-sidebar-foreground/70 hover:text-sidebar-foreground group-data-[collapsible=icon]:ml-0">
-                <LogOut size={16}/>
-            </Button>
-          </div>
-        </SidebarFooter>
+          </SidebarFooter>
+        )}
       </Sidebar>
       <SidebarInset>
         <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-6">

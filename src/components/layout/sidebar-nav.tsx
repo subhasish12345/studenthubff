@@ -2,28 +2,31 @@
 
 import { usePathname } from "next/navigation";
 import { SidebarMenu, SidebarMenuItem, SidebarMenuButton } from "@/components/ui/sidebar";
-import { LayoutDashboard, Timer, ClipboardList, Bell, CalendarDays, Folder, FileText, LogIn } from "lucide-react";
+import { LayoutDashboard, Timer, ClipboardList, Bell, CalendarDays, Folder, FileText, LogIn, LogOut } from "lucide-react";
 import Link from "next/link";
+import { useAuth } from "@/hooks/use-auth";
 
 const navItems = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/focus", label: "Focus Session", icon: Timer },
-  { href: "/assignments", label: "Assignments", icon: ClipboardList },
-  { href: "/notices", label: "Notice Board", icon: Bell },
-  { href: "/events", label: "Events", icon: CalendarDays },
-  { href: "/resources", label: "Resources", icon: Folder },
-  { href: "/resume-builder", label: "AI Resume Builder", icon: FileText },
-  { href: "/login", label: "Login", icon: LogIn },
+  { href: "/", label: "Dashboard", icon: LayoutDashboard, requiresAuth: true },
+  { href: "/focus", label: "Focus Session", icon: Timer, requiresAuth: true },
+  { href: "/assignments", label: "Assignments", icon: ClipboardList, requiresAuth: true },
+  { href: "/notices", label: "Notice Board", icon: Bell, requiresAuth: true },
+  { href: "/events", label: "Events", icon: CalendarDays, requiresAuth: true },
+  { href: "/resources", label: "Resources", icon: Folder, requiresAuth: true },
+  { href: "/resume-builder", label: "AI Resume Builder", icon: FileText, requiresAuth: true },
 ];
 
 export function SidebarNav() {
   const pathname = usePathname();
+  const { user, logOut } = useAuth();
+
+  const displayedNavItems = navItems.filter(item => !item.requiresAuth || (item.requiresAuth && user));
 
   return (
     <SidebarMenu>
-      {navItems.map((item) => (
+      {displayedNavItems.map((item) => (
         <SidebarMenuItem key={item.href}>
-          <Link href={item.href}>
+          <Link href={item.href} passHref legacyBehavior>
             <SidebarMenuButton
               as="a"
               isActive={pathname === item.href}
@@ -35,6 +38,28 @@ export function SidebarNav() {
           </Link>
         </SidebarMenuItem>
       ))}
+      <SidebarMenuItem>
+        {user ? (
+          <SidebarMenuButton
+            onClick={() => logOut()}
+            tooltip={{ children: "Logout", side: "right", align: "center" }}
+          >
+            <LogOut />
+            <span>Logout</span>
+          </SidebarMenuButton>
+        ) : (
+          <Link href="/login" passHref legacyBehavior>
+            <SidebarMenuButton
+              as="a"
+              isActive={pathname === "/login"}
+              tooltip={{ children: "Login", side: "right", align: "center" }}
+            >
+              <LogIn />
+              <span>Login</span>
+            </SidebarMenuButton>
+          </Link>
+        )}
+      </SidebarMenuItem>
     </SidebarMenu>
   );
 }
