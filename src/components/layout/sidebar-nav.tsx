@@ -3,12 +3,13 @@
 
 import { usePathname } from "next/navigation";
 import { SidebarMenu, SidebarMenuItem, SidebarMenuButton } from "@/components/ui/sidebar";
-import { LayoutDashboard, Timer, ClipboardList, Bell, CalendarDays, Folder, FileText, LogIn, LogOut } from "lucide-react";
+import { LayoutDashboard, Timer, ClipboardList, Bell, CalendarDays, Folder, FileText, LogIn, LogOut, Shield } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/hooks/use-auth";
 
 const allNavItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard, roles: ['student', 'teacher', 'admin'] },
+  { href: "/admin", label: "Admin Panel", icon: Shield, roles: ['admin'] },
   { href: "/focus", label: "Focus Session", icon: Timer, roles: ['student'] },
   { href: "/assignments", label: "Assignments", icon: ClipboardList, roles: ['student', 'teacher'] },
   { href: "/notices", label: "Notice Board", icon: Bell, roles: ['student', 'teacher', 'admin'] },
