@@ -12,11 +12,14 @@ const degreesData = [
     { name: 'MCA', duration: '2 Years', streams: 1 },
     { name: 'BCA', duration: '3 Years', streams: 1 },
     { name: 'MBA', duration: '2 Years', streams: 3 },
+    { name: 'Nursing', duration: '3 Years', streams: 1 },
+    { name: 'BBA', duration: '3 Years', streams: 1 },
 ];
 
 const teachersData = [
     { name: 'Dr. Alan Smith', email: 'alan.s@example.com', degree: 'B.Tech', stream: 'CSE', year: '1st' },
     { name: 'Prof. Mary Jane', email: 'mary.j@example.com', degree: 'MBA', stream: 'Finance', year: '2nd' },
+    { name: 'Mr. Ankit Sharma', email: 'ankit.s@example.com', degree: 'B.Tech', stream: 'AIML', year: '1st' },
 ]
 
 export default function AdminPage() {
@@ -121,7 +124,7 @@ export default function AdminPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem>Edit</DropdownMenuItem>
+                            <DropdownMenuItem>Edit Assignment</DropdownMenuItem>
                             <DropdownMenuItem className="text-destructive">Remove</DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
