@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
@@ -15,8 +16,11 @@ import {
 import { auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 
+type Role = 'student' | 'teacher' | 'admin';
+
 interface AuthContextType {
   user: User | null;
+  role: Role | null;
   loading: boolean;
   signUp: (email: string, password: string) => Promise<any>;
   logIn: (email: string, password: string) => Promise<any>;
@@ -26,14 +30,30 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Hardcoded admin email
+const ADMIN_EMAIL = 'subhasishnayak38@gmail.com';
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [role, setRole] = useState<Role | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
+      if (user) {
+        setUser(user);
+        // Check for admin role
+        if (user.email === ADMIN_EMAIL) {
+          setRole('admin');
+        } else {
+          // TODO: Implement logic to determine teacher or student role from database
+          setRole('student'); 
+        }
+      } else {
+        setUser(null);
+        setRole(null);
+      }
       setLoading(false);
     });
     return () => unsubscribe();
@@ -54,7 +74,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       'login_hint': 'user@example.com'
     });
     // Explicitly setting the authDomain can solve configuration issues.
-    auth.tenantId = auth.app.options.authDomain;
+    if(auth.app.options.authDomain) {
+      auth.tenantId = auth.app.options.authDomain;
+    }
     return signInWithPopup(auth, provider);
   }
 
@@ -65,6 +87,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const value = {
     user,
+    role,
     loading,
     signUp,
     logIn,

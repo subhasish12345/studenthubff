@@ -1,22 +1,29 @@
+
+'use client';
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
-import { BarChart, BookOpen, CalendarDays, ClipboardList, Folder, LayoutDashboard, Timer, Users, FileText, Bell } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
+import { CalendarDays, ClipboardList, FileText, Bell, Folder, Timer, Users } from "lucide-react";
 import Link from "next/link";
 
 export default function DashboardPage() {
+  const { user, role } = useAuth();
+  const name = user?.displayName?.split(' ')[0] || user?.email?.split('@')[0] || 'User';
+
   return (
     <div className="flex flex-col gap-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-4xl font-bold font-headline">Welcome Back, Alex!</h1>
-          <p className="text-muted-foreground">Here's your snapshot for today.</p>
+          <h1 className="text-4xl font-bold font-headline">Welcome Back, {name}!</h1>
+          <p className="text-muted-foreground">Here's your snapshot for today. You are logged in as {role}.</p>
         </div>
         <div className="flex items-center gap-4">
            <Avatar>
-            <AvatarImage src="https://placehold.co/100x100" alt="User avatar" data-ai-hint="user avatar" />
-            <AvatarFallback>AU</AvatarFallback>
+            <AvatarImage src={user?.photoURL ?? 'https://placehold.co/100x100'} alt="User avatar" data-ai-hint="user avatar" />
+            <AvatarFallback>{user?.email?.charAt(0).toUpperCase()}</AvatarFallback>
           </Avatar>
         </div>
       </div>
@@ -71,12 +78,14 @@ export default function DashboardPage() {
             <CardDescription>Jump right back into your work.</CardDescription>
           </CardHeader>
           <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <Link href="/focus" passHref>
-              <Button variant="outline" className="w-full h-24 flex flex-col gap-2">
-                <Timer size={24} />
-                <span>Start Focus</span>
-              </Button>
-            </Link>
+            {role !== 'admin' && (
+              <Link href="/focus" passHref>
+                <Button variant="outline" className="w-full h-24 flex flex-col gap-2">
+                  <Timer size={24} />
+                  <span>Start Focus</span>
+                </Button>
+              </Link>
+            )}
             <Link href="/assignments" passHref>
               <Button variant="outline" className="w-full h-24 flex flex-col gap-2">
                 <ClipboardList size={24} />

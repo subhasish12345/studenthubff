@@ -1,3 +1,4 @@
+
 "use client";
 
 import { usePathname } from "next/navigation";
@@ -6,49 +7,53 @@ import { LayoutDashboard, Timer, ClipboardList, Bell, CalendarDays, Folder, File
 import Link from "next/link";
 import { useAuth } from "@/hooks/use-auth";
 
-const navItems = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard, requiresAuth: true },
-  { href: "/focus", label: "Focus Session", icon: Timer, requiresAuth: true },
-  { href: "/assignments", label: "Assignments", icon: ClipboardList, requiresAuth: true },
-  { href: "/notices", label: "Notice Board", icon: Bell, requiresAuth: true },
-  { href: "/events", label: "Events", icon: CalendarDays, requiresAuth: true },
-  { href: "/resources", label: "Resources", icon: Folder, requiresAuth: true },
-  { href: "/resume-builder", label: "AI Resume Builder", icon: FileText, requiresAuth: true },
+const allNavItems = [
+  { href: "/", label: "Dashboard", icon: LayoutDashboard, roles: ['student', 'teacher', 'admin'] },
+  { href: "/focus", label: "Focus Session", icon: Timer, roles: ['student'] },
+  { href: "/assignments", label: "Assignments", icon: ClipboardList, roles: ['student', 'teacher'] },
+  { href: "/notices", label: "Notice Board", icon: Bell, roles: ['student', 'teacher', 'admin'] },
+  { href: "/events", label: "Events", icon: CalendarDays, roles: ['student', 'teacher', 'admin'] },
+  { href: "/resources", label: "Resources", icon: Folder, roles: ['student', 'teacher', 'admin'] },
+  { href: "/resume-builder", label: "AI Resume Builder", icon: FileText, roles: ['student'] },
 ];
 
 export function SidebarNav() {
   const pathname = usePathname();
-  const { user, logOut } = useAuth();
+  const { user, role, logOut } = useAuth();
 
-  const displayedNavItems = navItems.filter(item => !item.requiresAuth || (item.requiresAuth && user));
+  const navItems = allNavItems.filter(item => user && item.roles.includes(role || 'student'));
 
   return (
     <SidebarMenu>
-      {displayedNavItems.map((item) => (
-        <SidebarMenuItem key={item.href}>
-          <Link href={item.href}>
+      {user ? (
+        <>
+          {navItems.map((item) => (
+            <SidebarMenuItem key={item.href}>
+              <Link href={item.href} passHref>
+                <SidebarMenuButton
+                  as="a"
+                  isActive={pathname === item.href}
+                  tooltip={{ children: item.label, side: "right", align: "center" }}
+                >
+                  <item.icon />
+                  <span>{item.label}</span>
+                </SidebarMenuButton>
+              </Link>
+            </SidebarMenuItem>
+          ))}
+          <SidebarMenuItem>
             <SidebarMenuButton
-              as="a"
-              isActive={pathname === item.href}
-              tooltip={{ children: item.label, side: "right", align: "center" }}
+              onClick={() => logOut()}
+              tooltip={{ children: "Logout", side: "right", align: "center" }}
             >
-              <item.icon />
-              <span>{item.label}</span>
+              <LogOut />
+              <span>Logout</span>
             </SidebarMenuButton>
-          </Link>
-        </SidebarMenuItem>
-      ))}
-      <SidebarMenuItem>
-        {user ? (
-          <SidebarMenuButton
-            onClick={() => logOut()}
-            tooltip={{ children: "Logout", side: "right", align: "center" }}
-          >
-            <LogOut />
-            <span>Logout</span>
-          </SidebarMenuButton>
-        ) : (
-          <Link href="/login">
+          </SidebarMenuItem>
+        </>
+      ) : (
+        <SidebarMenuItem>
+          <Link href="/login" passHref>
             <SidebarMenuButton
               as="a"
               isActive={pathname === "/login"}
@@ -58,8 +63,8 @@ export function SidebarNav() {
               <span>Login</span>
             </SidebarMenuButton>
           </Link>
-        )}
-      </SidebarMenuItem>
+        </SidebarMenuItem>
+      )}
     </SidebarMenu>
   );
 }
