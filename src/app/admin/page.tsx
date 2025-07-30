@@ -280,9 +280,19 @@ function DeleteBatchDialog({ degreeId, streamId, batchId, onBatchDeleted }: { de
 }
 
 
-function ManageSectionsDialog({ degree, stream, batch }: { degree: Degree; stream: Stream; batch: Batch }) {
-    const [open, setOpen] = useState(false);
-    
+function ManageSectionsDialog({ 
+    open, 
+    onOpenChange, 
+    degree, 
+    stream, 
+    batch 
+}: { 
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    degree: Degree; 
+    stream: Stream; 
+    batch: Batch;
+}) {
     const [semesters, setSemesters] = useState<Semester[]>([]);
     const [isLoadingSemesters, setIsLoadingSemesters] = useState(true);
     const [selectedSemester, setSelectedSemester] = useState<string | null>(null);
@@ -304,6 +314,8 @@ function ManageSectionsDialog({ degree, stream, batch }: { degree: Degree; strea
                 setSemesters(semesterData);
                  if (semesterData.length > 0) {
                     setSelectedSemester(semesterData[0].id);
+                 } else {
+                    setSelectedSemester(null);
                  }
             } catch (error) { 
                 console.error(error);
@@ -360,10 +372,7 @@ function ManageSectionsDialog({ degree, stream, batch }: { degree: Degree; strea
     };
 
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>Manage Sections</DropdownMenuItem>
-            </DialogTrigger>
+        <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-xl">
                 <DialogHeader>
                     <DialogTitle>Manage Sections for {batch.name}</DialogTitle>
@@ -378,12 +387,10 @@ function ManageSectionsDialog({ degree, stream, batch }: { degree: Degree; strea
                         ) : (
                             <Select onValueChange={setSelectedSemester} value={selectedSemester || ''}>
                                 <SelectTrigger id="semester-select" className="mt-1"><SelectValue placeholder="Select Semester" /></SelectTrigger>
-                                <DialogPortal>
-                                    <SelectContent>
-                                        {semesters.map(sem => 
-                                        <SelectItem key={sem.id} value={sem.id}>{sem.name}</SelectItem>)}
-                                    </SelectContent>
-                                </DialogPortal>
+                                <SelectContent>
+                                    {semesters.map(sem => 
+                                    <SelectItem key={sem.id} value={sem.id}>{sem.name}</SelectItem>)}
+                                </SelectContent>
                             </Select>
                         )}
                     </div>
@@ -436,18 +443,30 @@ function ManageSectionsDialog({ degree, stream, batch }: { degree: Degree; strea
     );
 }
 
-function ManageBatchesDialog({ degree, stream }: { degree: Degree; stream: Stream }) {
+function ManageBatchesDialog({ 
+    open, 
+    onOpenChange, 
+    degree, 
+    stream, 
+    onManageSections 
+}: { 
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    degree: Degree | null; 
+    stream: Stream | null;
+    onManageSections: (batch: Batch) => void;
+}) {
     const [batches, setBatches] = useState<Batch[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isCreating, setIsCreating] = useState(false);
     const [batchName, setBatchName] = useState('');
     const [startYear, setStartYear] = useState<number>(new Date().getFullYear());
-    const [endYear, setEndYear] = useState<number>(new Date().getFullYear() + degree.duration);
+    const [endYear, setEndYear] = useState<number>(new Date().getFullYear() + (degree?.duration ?? 0));
 
     const { toast } = useToast();
-    const [open, setOpen] = useState(false);
-
+    
     const fetchBatches = async () => {
+        if (!degree || !stream) return;
         setIsLoading(true);
         try {
             const batchesData = await getBatchesForStream(degree.id, stream.id);
@@ -460,19 +479,22 @@ function ManageBatchesDialog({ degree, stream }: { degree: Degree; stream: Strea
     };
     
     useEffect(() => {
-        if (open) {
+        if (open && degree && stream) {
            fetchBatches();
         }
-    }, [open, degree.id, stream.id]);
+    }, [open, degree, stream]);
 
     useEffect(() => {
-        setEndYear(startYear + degree.duration);
-        setBatchName(`${startYear}-${startYear + degree.duration} Batch`);
-    }, [startYear, degree.duration]);
+        if(degree) {
+            const duration = degree.duration;
+            setEndYear(startYear + duration);
+            setBatchName(`${startYear}-${startYear + duration} Batch`);
+        }
+    }, [startYear, degree]);
 
     const handleAddBatch = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!batchName || !startYear || !endYear) {
+        if (!batchName || !startYear || !endYear || !degree || !stream) {
             toast({ variant: 'destructive', title: 'Error', description: 'Please fill all batch fields.' });
             return;
         }
@@ -519,12 +541,10 @@ function ManageBatchesDialog({ degree, stream }: { degree: Degree; stream: Strea
         }
     };
 
+    if (!degree || !stream) return null;
 
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-                <Button variant="outline" size="sm">Manage Batches</Button>
-            </DialogTrigger>
+        <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-[800px]">
                 <DialogHeader>
                     <DialogTitle>Manage Batches for {degree.name} - {stream.name}</DialogTitle>
@@ -589,7 +609,7 @@ function ManageBatchesDialog({ degree, stream }: { degree: Degree; stream: Strea
                                                         </DropdownMenuTrigger>
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                            <ManageSectionsDialog degree={degree} stream={stream} batch={batch} />
+                                                            <DropdownMenuItem onSelect={() => onManageSections(batch)}>Manage Sections</DropdownMenuItem>
                                                             <DropdownMenuItem>Edit Batch</DropdownMenuItem>
                                                             <DropdownMenuItem>Promote Batch</DropdownMenuItem>
                                                             <DropdownMenuSeparator />
@@ -618,16 +638,27 @@ function ManageBatchesDialog({ degree, stream }: { degree: Degree; stream: Strea
     );
 }
 
-function ManageStreamsDialog({ degree, onStreamAdded }: { degree: Degree, onStreamAdded: () => void }) {
+function ManageStreamsDialog({ 
+    open, 
+    onOpenChange, 
+    degree, 
+    onStreamAdded, 
+    onManageBatches 
+}: { 
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    degree: Degree | null; 
+    onStreamAdded: () => void;
+    onManageBatches: (stream: Stream) => void;
+}) {
     const [streamName, setStreamName] = useState('');
     const [streams, setStreams] = useState<Stream[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [isFetchingStreams, setIsFetchingStreams] = useState(true);
     const { toast } = useToast();
-    const [open, setOpen] = useState(false);
 
     const fetchStreams = async () => {
-        if (!degree.id) return;
+        if (!degree) return;
         setIsFetchingStreams(true);
         try {
             const streamsData = await getStreams(degree.id);
@@ -643,11 +674,11 @@ function ManageStreamsDialog({ degree, onStreamAdded }: { degree: Degree, onStre
         if (open) {
             fetchStreams();
         }
-    }, [open, degree.id]);
+    }, [open, degree]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!streamName) {
+        if (!streamName || !degree) {
             toast({ variant: 'destructive', title: 'Error', description: 'Stream name cannot be empty.' });
             return;
         }
@@ -665,11 +696,10 @@ function ManageStreamsDialog({ degree, onStreamAdded }: { degree: Degree, onStre
         }
     }
 
+    if (!degree) return null;
+
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-                 <DropdownMenuItem onSelect={(e) => e.preventDefault()}>Manage Streams</DropdownMenuItem>
-            </DialogTrigger>
+        <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent>
                  <DialogHeader>
                     <DialogTitle>Manage Streams for {degree.name}</DialogTitle>
@@ -703,7 +733,9 @@ function ManageStreamsDialog({ degree, onStreamAdded }: { degree: Degree, onStre
                                         <TableRow key={stream.id}>
                                             <TableCell className="font-medium">{stream.name}</TableCell>
                                             <TableCell className="text-right">
-                                                <ManageBatchesDialog degree={degree} stream={stream} />
+                                                <Button variant="outline" size="sm" onClick={() => onManageBatches(stream)}>
+                                                    Manage Batches
+                                                </Button>
                                             </TableCell>
                                         </TableRow>
                                     ))}
@@ -730,6 +762,15 @@ export default function AdminPage() {
     const [isLoadingDegrees, setIsLoadingDegrees] = useState(true);
     const { toast } = useToast();
 
+    // State for managing dialogs
+    const [isStreamsDialogOpen, setIsStreamsDialogOpen] = useState(false);
+    const [isBatchesDialogOpen, setIsBatchesDialogOpen] = useState(false);
+    const [isSectionsDialogOpen, setIsSectionsDialogOpen] = useState(false);
+
+    const [selectedDegree, setSelectedDegree] = useState<Degree | null>(null);
+    const [selectedStream, setSelectedStream] = useState<Stream | null>(null);
+    const [selectedBatch, setSelectedBatch] = useState<Batch | null>(null);
+
     const fetchDegrees = async () => {
         setIsLoadingDegrees(true);
         try {
@@ -747,6 +788,22 @@ export default function AdminPage() {
         fetchDegrees();
     }, []);
 
+    const handleManageStreams = (degree: Degree) => {
+        setSelectedDegree(degree);
+        setIsStreamsDialogOpen(true);
+    };
+
+    const handleManageBatches = (stream: Stream) => {
+        setSelectedStream(stream);
+        setIsStreamsDialogOpen(false);
+        setIsBatchesDialogOpen(true);
+    };
+    
+    const handleManageSections = (batch: Batch) => {
+        setSelectedBatch(batch);
+        setIsBatchesDialogOpen(false);
+        setIsSectionsDialogOpen(true);
+    };
 
     return (
         <div className="flex flex-col gap-8">
@@ -807,7 +864,9 @@ export default function AdminPage() {
                                                         </DropdownMenuTrigger>
                                                         <DropdownMenuContent align="end">
                                                             <EditDegreeDialog degree={degree} onDegreeUpdated={fetchDegrees} />
-                                                            <ManageStreamsDialog degree={degree} onStreamAdded={fetchDegrees} />
+                                                            <DropdownMenuItem onSelect={() => handleManageStreams(degree)}>
+                                                                Manage Streams
+                                                            </DropdownMenuItem>
                                                             <DeleteDegreeDialog degreeId={degree.id} onDegreeDeleted={fetchDegrees} />
                                                         </DropdownMenuContent>
                                                     </DropdownMenu>
@@ -897,9 +956,34 @@ export default function AdminPage() {
                 </TabsContent>
 
             </Tabs>
+
+            {/* Dialogs rendered at the top level to avoid nesting issues */}
+            <ManageStreamsDialog 
+                open={isStreamsDialogOpen}
+                onOpenChange={setIsStreamsDialogOpen}
+                degree={selectedDegree}
+                onStreamAdded={fetchDegrees}
+                onManageBatches={handleManageBatches}
+            />
+
+            <ManageBatchesDialog
+                open={isBatchesDialogOpen}
+                onOpenChange={setIsBatchesDialogOpen}
+                degree={selectedDegree}
+                stream={selectedStream}
+                onManageSections={handleManageSections}
+            />
+            
+            {selectedDegree && selectedStream && selectedBatch && (
+                 <ManageSectionsDialog
+                    open={isSectionsDialogOpen}
+                    onOpenChange={setIsSectionsDialogOpen}
+                    degree={selectedDegree}
+                    stream={selectedStream}
+                    batch={selectedBatch}
+                />
+            )}
+           
         </div>
     );
 }
-
-
-    
