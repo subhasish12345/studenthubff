@@ -3,11 +3,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { PlusCircle, MoreHorizontal, Loader2, Edit, Trash2 } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, Loader2, Edit, Trash2, Eye } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,6 +18,38 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Notice, addNotice, getNotices, updateNotice, deleteNotice, NoticeCategory } from '@/services/notices';
 import { Switch } from '@/components/ui/switch';
 import { getDegrees } from '@/services/degrees';
+
+function ViewNoticeDialog({ notice }: { notice: Notice }) {
+    return (
+        <Dialog>
+            <DialogTrigger asChild>
+                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                    <Eye className="mr-2 h-4 w-4" /> View Notice
+                </DropdownMenuItem>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-2xl">
+                <DialogHeader>
+                    <DialogTitle>{notice.title}</DialogTitle>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground pt-2">
+                        <Badge variant="outline">{notice.category}</Badge>
+                        <span>&bull;</span>
+                        <span>Posted by {notice.posted_by}</span>
+                        <span>&bull;</span>
+                        <span>{new Date(notice.posted_on).toLocaleDateString()}</span>
+                    </div>
+                </DialogHeader>
+                <div className="py-4 whitespace-pre-wrap text-sm">
+                    {notice.message}
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild>
+                        <Button type="button">Close</Button>
+                    </DialogClose>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
 
 function AddEditNoticeDialog({ mode, notice, onNoticeUpdated }: { mode: 'add' | 'edit', notice?: Notice, onNoticeUpdated: () => void }) {
     const [title, setTitle] = useState(notice?.title || '');
@@ -322,7 +354,9 @@ export default function NoticeBoardAdminPage() {
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
                                                     <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                    <ViewNoticeDialog notice={notice} />
                                                     <AddEditNoticeDialog mode="edit" notice={notice} onNoticeUpdated={fetchNotices} />
+                                                    <DropdownMenuSeparator />
                                                     <DeleteNoticeDialog notice={notice} onNoticeDeleted={fetchNotices} />
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
