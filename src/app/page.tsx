@@ -1,33 +1,87 @@
-
 'use client';
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar } from "@/components/ui/calendar";
-import { useAuth } from "@/hooks/use-auth";
-import { CalendarDays, ClipboardList, FileText, Bell, Folder, Timer, Users } from "lucide-react";
+import { useState } from "react";
 import Link from "next/link";
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage
+} from "@/components/ui/avatar";
+import {
+  Button
+} from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from "@/components/ui/card";
+import {
+  Calendar
+} from "@/components/ui/calendar";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem
+} from "@/components/ui/select";
+
+import {
+  useAuth
+} from "@/hooks/use-auth";
+import {
+  CalendarDays,
+  ClipboardList,
+  FileText,
+  Bell,
+  Folder,
+  Timer,
+  Users
+} from "lucide-react";
 
 export default function DashboardPage() {
   const { user, role } = useAuth();
   const name = user?.displayName?.split(' ')[0] || user?.email?.split('@')[0] || 'User';
 
+  const [academicYear, setAcademicYear] = useState("");
+
   return (
     <div className="flex flex-col gap-8">
+      {/* Top Section */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-4xl font-bold font-headline">Welcome Back, {name}!</h1>
-          <p className="text-muted-foreground">Here's your snapshot for today. You are logged in as {role}.</p>
+          <p className="text-muted-foreground">
+            Here's your snapshot for today. You are logged in as {role}.
+          </p>
+
+          {/* Academic Year Dropdown */}
+          <div className="mt-4 w-[250px]">
+            <label className="text-sm font-medium mb-1 block">Academic Year</label>
+            <Select value={academicYear} onValueChange={setAcademicYear}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select Academic Year" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="2024-2025">2024 - 2025</SelectItem>
+                <SelectItem value="2025-2026">2025 - 2026</SelectItem>
+                <SelectItem value="2026-2027">2026 - 2027</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
+
         <div className="flex items-center gap-4">
-           <Avatar>
-            <AvatarImage src={user?.photoURL ?? 'https://placehold.co/100x100'} alt="User avatar" data-ai-hint="user avatar" />
+          <Avatar>
+            <AvatarImage src={user?.photoURL ?? 'https://placehold.co/100x100'} alt="User avatar" />
             <AvatarFallback>{user?.email?.charAt(0).toUpperCase()}</AvatarFallback>
           </Avatar>
         </div>
       </div>
 
+      {/* Dashboard Cards */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -39,6 +93,7 @@ export default function DashboardPage() {
             <p className="text-xs text-muted-foreground">+20% from yesterday</p>
           </CardContent>
         </Card>
+
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Assignments Due</CardTitle>
@@ -49,6 +104,7 @@ export default function DashboardPage() {
             <p className="text-xs text-muted-foreground">1 due today</p>
           </CardContent>
         </Card>
+
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Upcoming Events</CardTitle>
@@ -59,6 +115,7 @@ export default function DashboardPage() {
             <p className="text-xs text-muted-foreground">Hackathon this weekend</p>
           </CardContent>
         </Card>
+
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">New Notices</CardTitle>
@@ -71,6 +128,7 @@ export default function DashboardPage() {
         </Card>
       </div>
 
+      {/* Quick Access + Calendar */}
       <div className="grid gap-8 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
@@ -104,7 +162,7 @@ export default function DashboardPage() {
                 <span>Resources</span>
               </Button>
             </Link>
-             <Link href="/notices" passHref>
+            <Link href="/notices" passHref>
               <Button variant="outline" className="w-full h-24 flex flex-col gap-2">
                 <Bell size={24} />
                 <span>Notice Board</span>
@@ -126,7 +184,11 @@ export default function DashboardPage() {
           <CardContent>
             <Calendar
               mode="multiple"
-              selected={[new Date(), new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), new Date(Date.now() + 5 * 24 * 60 * 60 * 1000)]}
+              selected={[
+                new Date(),
+                new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+                new Date(Date.now() + 5 * 24 * 60 * 60 * 1000)
+              ]}
               className="p-0"
               disabled
             />
@@ -134,27 +196,32 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-       <div className="grid gap-8 lg:grid-cols-3">
+      {/* Recent Notices + Active Circles */}
+      <div className="grid gap-8 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Recent Notices</CardTitle>
-             <CardDescription>Stay updated with the latest announcements.</CardDescription>
+            <CardDescription>Stay updated with the latest announcements.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-              <div className="flex items-start gap-4">
-                  <div className="bg-primary/10 p-2 rounded-full"><Bell className="text-primary"/></div>
-                  <div>
-                      <p className="font-semibold">Mid-term Exam Schedule</p>
-                      <p className="text-sm text-muted-foreground">The schedule for the upcoming mid-term exams has been posted. Check the notice board for details.</p>
-                  </div>
+            <div className="flex items-start gap-4">
+              <div className="bg-primary/10 p-2 rounded-full">
+                <Bell className="text-primary" />
               </div>
-              <div className="flex items-start gap-4">
-                  <div className="bg-primary/10 p-2 rounded-full"><Users className="text-primary"/></div>
-                  <div>
-                      <p className="font-semibold">Annual Sports Day Registration</p>
-                      <p className="text-sm text-muted-foreground">Registrations for the annual sports day are now open. Last day to register is Oct 25th.</p>
-                  </div>
+              <div>
+                <p className="font-semibold">Mid-term Exam Schedule</p>
+                <p className="text-sm text-muted-foreground">The schedule for the upcoming mid-term exams has been posted. Check the notice board for details.</p>
               </div>
+            </div>
+            <div className="flex items-start gap-4">
+              <div className="bg-primary/10 p-2 rounded-full">
+                <Users className="text-primary" />
+              </div>
+              <div>
+                <p className="font-semibold">Annual Sports Day Registration</p>
+                <p className="text-sm text-muted-foreground">Registrations for the annual sports day are now open. Last day to register is Oct 25th.</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -167,7 +234,7 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Avatar>
-                  <AvatarImage src="https://placehold.co/40x40" data-ai-hint="logo" />
+                  <AvatarImage src="https://placehold.co/40x40" />
                   <AvatarFallback>DS</AvatarFallback>
                 </Avatar>
                 <div>
@@ -177,10 +244,11 @@ export default function DashboardPage() {
               </div>
               <Button variant="ghost" size="sm">View</Button>
             </div>
-             <div className="flex items-center justify-between">
+
+            <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Avatar>
-                  <AvatarImage src="https://placehold.co/40x40" data-ai-hint="logo" />
+                  <AvatarImage src="https://placehold.co/40x40" />
                   <AvatarFallback>AI</AvatarFallback>
                 </Avatar>
                 <div>
