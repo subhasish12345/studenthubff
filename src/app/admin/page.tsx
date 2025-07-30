@@ -13,9 +13,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { addDegree, getDegrees, Degree } from '@/services/degrees';
+import { getDegrees, Degree } from '@/services/degrees';
 import { addStream, getStreams, Stream } from '@/services/streams';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { createDegreeStructure } from '@/services/setup-collections';
 
 
 const teachersData = [
@@ -26,7 +27,7 @@ const teachersData = [
 
 function AddDegreeDialog({ onDegreeAdded }: { onDegreeAdded: () => void }) {
     const [name, setName] = useState('');
-    const [duration, setDuration] = useState('');
+    const [duration, setDuration] = useState(0);
     const [isLoading, setIsLoading] = useState(false);
     const { toast } = useToast();
     const [open, setOpen] = useState(false);
@@ -39,15 +40,16 @@ function AddDegreeDialog({ onDegreeAdded }: { onDegreeAdded: () => void }) {
         }
         setIsLoading(true);
         try {
-            await addDegree({ name, duration: parseInt(duration, 10), streamCount: 0 });
-            toast({ title: 'Success', description: 'Degree added successfully.' });
+            await createDegreeStructure(name, duration);
+            toast({ title: 'Success', description: `Degree structure for ${name} created successfully.` });
             onDegreeAdded();
             setOpen(false);
             setName('');
-            setDuration('');
+            setDuration(0);
         } catch (error) {
             console.error(error);
-            toast({ variant: 'destructive', title: 'Error', description: 'Failed to add degree.' });
+            const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+            toast({ variant: 'destructive', title: 'Error', description: `Failed to create degree structure: ${errorMessage}` });
         } finally {
             setIsLoading(false);
         }
@@ -85,12 +87,11 @@ function AddDegreeDialog({ onDegreeAdded }: { onDegreeAdded: () => void }) {
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="duration" className="text-right">Duration</Label>
-                             <Select onValueChange={setDuration} value={duration}>
+                             <Select onValueChange={(val) => setDuration(parseInt(val,10))} value={duration ? duration.toString() : ''}>
                                 <SelectTrigger className="col-span-3">
                                     <SelectValue placeholder="Select duration (years)" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="1">1 Year</SelectItem>
                                     <SelectItem value="2">2 Years</SelectItem>
                                     <SelectItem value="3">3 Years</SelectItem>
                                     <SelectItem value="4">4 Years</SelectItem>
@@ -220,6 +221,7 @@ function ManageStreamsDialog({ degree, onStreamAdded }: { degree: Degree, onStre
 export default function AdminPage() {
     const [degrees, setDegrees] = useState<Degree[]>([]);
     const [isLoadingDegrees, setIsLoadingDegrees] = useState(true);
+    const { toast } = useToast();
 
     const fetchDegrees = async () => {
         setIsLoadingDegrees(true);
@@ -390,5 +392,7 @@ export default function AdminPage() {
         </div>
     );
 }
+
+    
 
     

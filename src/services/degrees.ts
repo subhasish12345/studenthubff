@@ -1,6 +1,6 @@
 
 import { db } from '@/lib/firebase';
-import { collection, addDoc, getDocs, doc, setDoc, query, where, updateDoc, increment } from 'firebase/firestore';
+import { collection, addDoc, getDocs, doc, setDoc, query, where, updateDoc, increment, getDoc } from 'firebase/firestore';
 
 // Define the structure of a Degree object
 export interface Degree {
@@ -12,16 +12,16 @@ export interface Degree {
 
 const COLLEGE_ID = 'GEC'; // Hardcoding college ID as per the plan
 
-// Function to add a new degree to Firestore
-export const addDegree = async (degree: Omit<Degree, 'id'>) => {
+// This function is now mostly for reading degrees. 
+// The creation is handled by setup-collections.ts
+export const addDegree = async (degree: Omit<Degree, 'id' | 'streamCount'>): Promise<string> => {
   try {
-    // Ensure the parent college document exists. This is crucial.
     const collegeRef = doc(db, 'colleges', COLLEGE_ID);
+    // Ensure the parent college document exists.
     await setDoc(collegeRef, { name: "Gandhi Engineering College" }, { merge: true });
 
-    // Now, add the new degree to the 'degrees' subcollection.
-    const degreesCollectionRef = collection(db, 'colleges', COLLEGE_ID, 'degrees');
-    const docRef = await addDoc(degreesCollectionRef, degree);
+    const degreesCollectionRef = collection(collegeRef, 'degrees');
+    const docRef = await addDoc(degreesCollectionRef, { ...degree, streamCount: 0 });
     return docRef.id;
   } catch (e) {
     console.error("Error adding document: ", e);
@@ -32,7 +32,15 @@ export const addDegree = async (degree: Omit<Degree, 'id'>) => {
 // Function to get all degrees from Firestore
 export const getDegrees = async (): Promise<Degree[]> => {
   try {
-    const degreesCollectionRef = collection(db, 'colleges', COLLEGE_ID, 'degrees');
+    const collegeRef = doc(db, 'colleges', COLLEGE_ID);
+    const collegeSnap = await getDoc(collegeRef);
+    
+    // If the college doc doesn't exist, there are no degrees.
+    if (!collegeSnap.exists()) {
+      return [];
+    }
+
+    const degreesCollectionRef = collection(collegeRef, 'degrees');
     const querySnapshot = await getDocs(degreesCollectionRef);
     const degrees: Degree[] = [];
     querySnapshot.forEach((doc) => {
@@ -41,7 +49,6 @@ export const getDegrees = async (): Promise<Degree[]> => {
     return degrees;
   } catch (e) {
     console.error("Error getting documents: ", e);
-    // If the collection doesn't exist, it's not a critical error.
     return [];
   }
 };
