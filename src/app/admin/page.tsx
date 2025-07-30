@@ -21,8 +21,7 @@ import { createDegreeStructure } from '@/services/setup-collections';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Batch, addBatch, getBatchesForStream, deleteBatch } from '@/services/batches';
 import { Section, addSection, getSections } from '@/services/sections';
-import { Year, getYearsForBatch } from '@/services/years';
-import { Semester, getSemestersForYear } from '@/services/semesters';
+import { Semester, getSemestersForBatch } from '@/services/semesters';
 
 
 const teachersData = [
@@ -284,10 +283,6 @@ function DeleteBatchDialog({ degreeId, streamId, batchId, onBatchDeleted }: { de
 function ManageSectionsDialog({ degree, stream, batch }: { degree: Degree; stream: Stream; batch: Batch }) {
     const [open, setOpen] = useState(false);
     
-    const [years, setYears] = useState<Year[]>([]);
-    const [isLoadingYears, setIsLoadingYears] = useState(true);
-    const [selectedYear, setSelectedYear] = useState<string | null>(null);
-
     const [semesters, setSemesters] = useState<Semester[]>([]);
     const [isLoadingSemesters, setIsLoadingSemesters] = useState(false);
     const [selectedSemester, setSelectedSemester] = useState<string | null>(null);
@@ -301,38 +296,13 @@ function ManageSectionsDialog({ degree, stream, batch }: { degree: Degree; strea
 
     useEffect(() => {
         if (!open) return;
-        const fetchYears = async () => {
-            setIsLoadingYears(true);
-            try {
-                const yearData = await getYearsForBatch(degree.id, stream.id, batch.id);
-                setYears(yearData);
-                if (yearData.length > 0) {
-                    setSelectedYear(yearData[0].id);
-                } else {
-                    setSelectedYear(null);
-                }
-            } catch (error) { 
-                console.error(error);
-                toast({ variant: 'destructive', title: 'Error', description: 'Could not fetch academic years.' }); 
-            }
-            finally { setIsLoadingYears(false); }
-        };
-        fetchYears();
-    }, [open, degree.id, stream.id, batch.id, toast]);
-
-    useEffect(() => {
-        if (!selectedYear) {
-            setSemesters([]);
-            setSelectedSemester(null);
-            return;
-        };
 
         const fetchSemesters = async () => {
             setIsLoadingSemesters(true);
-            setSemesters([]); // Clear previous semesters
-            setSelectedSemester(null); // Reset selected semester
+            setSemesters([]);
+            setSelectedSemester(null);
             try {
-                const semesterData = await getSemestersForYear(degree.id, stream.id, batch.id, selectedYear);
+                const semesterData = await getSemestersForBatch(degree.id, stream.id, batch.id);
                 setSemesters(semesterData);
                  if (semesterData.length > 0) {
                     setSelectedSemester(semesterData[0].id);
@@ -344,14 +314,14 @@ function ManageSectionsDialog({ degree, stream, batch }: { degree: Degree; strea
             finally { setIsLoadingSemesters(false); }
         };
         fetchSemesters();
-    }, [selectedYear, degree.id, stream.id, batch.id, toast]);
+    }, [open, degree.id, stream.id, batch.id, toast]);
     
     useEffect(() => {
-        if (selectedYear && selectedSemester) {
+        if (selectedSemester) {
             const fetchSections = async () => {
                 setIsLoadingSections(true);
                 try {
-                    const sectionsData = await getSections(degree.id, stream.id, batch.id, selectedYear, selectedSemester);
+                    const sectionsData = await getSections(degree.id, stream.id, batch.id, selectedSemester);
                     setSections(sectionsData);
                 } catch (error) {
                     console.error(error);
@@ -364,22 +334,22 @@ function ManageSectionsDialog({ degree, stream, batch }: { degree: Degree; strea
         } else {
             setSections([]);
         }
-    }, [selectedYear, selectedSemester, degree.id, stream.id, batch.id, toast]);
+    }, [selectedSemester, degree.id, stream.id, batch.id, toast]);
 
     const handleAddSection = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newSectionName || !selectedYear || !selectedSemester) {
+        if (!newSectionName || !selectedSemester) {
             toast({ variant: 'destructive', title: 'Error', description: 'Please provide a section name.' });
             return;
         }
         setIsAddingSection(true);
         try {
-            await addSection(degree.id, stream.id, batch.id, selectedYear, selectedSemester, { name: newSectionName });
+            await addSection(degree.id, stream.id, batch.id, selectedSemester, { name: newSectionName });
             toast({ title: 'Success', description: `Section "${newSectionName}" added.` });
             setNewSectionName('');
             
             // Refresh the list after adding
-            const sectionsData = await getSections(degree.id, stream.id, batch.id, selectedYear, selectedSemester);
+            const sectionsData = await getSections(degree.id, stream.id, batch.id, selectedSemester);
             setSections(sectionsData);
             
         } catch (error) {
@@ -395,36 +365,23 @@ function ManageSectionsDialog({ degree, stream, batch }: { degree: Degree; strea
             <DialogTrigger asChild>
                 <DropdownMenuItem onSelect={(e) => e.preventDefault()}>Manage Sections</DropdownMenuItem>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-2xl">
+            <DialogContent className="sm:max-w-xl">
                 <DialogHeader>
                     <DialogTitle>Manage Sections for {batch.name}</DialogTitle>
                     <CardDescription>Add and view sections for each semester of this batch.</CardDescription>
                 </DialogHeader>
 
                 <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-2 gap-4">
-                         <div>
-                            <Label htmlFor="year-select">Academic Year</Label>
-                            {isLoadingYears ? (
-                                <div className="flex items-center space-x-2 mt-1"><Loader2 className="h-4 w-4 animate-spin"/><span>Loading...</span></div>
-                            ) : (
-                                <Select onValueChange={setSelectedYear} value={selectedYear || ''}>
-                                    <SelectTrigger id="year-select" className="mt-1"><SelectValue placeholder="Select Year" /></SelectTrigger>
-                                    <SelectContent>{years.map(year => <SelectItem key={year.id} value={year.id}>{year.name}</SelectItem>)}</SelectContent>
-                                </Select>
-                            )}
-                        </div>
-                        <div>
-                            <Label htmlFor="semester-select">Semester</Label>
-                             {isLoadingSemesters ? (
-                                <div className="flex items-center space-x-2 mt-1"><Loader2 className="h-4 w-4 animate-spin"/><span>Loading...</span></div>
-                            ) : (
-                                <Select onValueChange={setSelectedSemester} value={selectedSemester || ''} disabled={!selectedYear}>
-                                    <SelectTrigger id="semester-select" className="mt-1"><SelectValue placeholder="Select Semester" /></SelectTrigger>
-                                    <SelectContent>{semesters.map(sem => <SelectItem key={sem.id} value={sem.id}>{sem.name}</SelectItem>)}</SelectContent>
-                                </Select>
-                            )}
-                        </div>
+                     <div>
+                        <Label htmlFor="semester-select">Semester</Label>
+                         {isLoadingSemesters ? (
+                            <div className="flex items-center space-x-2 mt-1"><Loader2 className="h-4 w-4 animate-spin"/><span>Loading...</span></div>
+                        ) : (
+                            <Select onValueChange={setSelectedSemester} value={selectedSemester || ''}>
+                                <SelectTrigger id="semester-select" className="mt-1"><SelectValue placeholder="Select Semester" /></SelectTrigger>
+                                <SelectContent>{semesters.map(sem => <SelectItem key={sem.id} value={sem.id}>{sem.name}</SelectItem>)}</SelectContent>
+                            </Select>
+                        )}
                     </div>
                     
 

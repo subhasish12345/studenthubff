@@ -9,10 +9,10 @@ export interface Semester {
 
 const COLLEGE_ID = 'GEC';
 
-export const getSemestersForYear = async (degreeId: string, streamId: string, batchId: string, yearId: string): Promise<Semester[]> => {
+export const getSemestersForBatch = async (degreeId: string, streamId: string, batchId: string): Promise<Semester[]> => {
   try {
-    const semesterCollectionRef = collection(db, 'colleges', COLLEGE_ID, 'degrees', degreeId, 'streams', streamId, 'batches', batchId, 'years', yearId, 'semesters');
-    const q = query(semesterCollectionRef, orderBy('__name__')); // Order by document ID (which will be '1', '2', etc.)
+    const semesterCollectionRef = collection(db, 'colleges', COLLEGE_ID, 'degrees', degreeId, 'streams', streamId, 'batches', batchId, 'semesters');
+    const q = query(semesterCollectionRef, orderBy('__name__')); // Order by document ID (which will be '1-sem', '2-sem', etc.)
     const querySnapshot = await getDocs(q);
     const semesters: Semester[] = [];
     querySnapshot.forEach((doc) => {
@@ -23,6 +23,6 @@ export const getSemestersForYear = async (degreeId: string, streamId: string, ba
     return semesters;
   } catch (e) {
     console.error("Error getting semesters: ", e);
-    throw new Error('Failed to fetch semesters for year');
+    throw new Error('Failed to fetch semesters for batch');
   }
 };

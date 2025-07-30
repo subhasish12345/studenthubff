@@ -9,10 +9,10 @@ export interface Section {
     name: string;
 }
 
-export const addSection = async (degreeId: string, streamId: string, batchId: string, yearId: string, semesterId: string, sectionData: Omit<Section, 'id'>) => {
+export const addSection = async (degreeId: string, streamId: string, batchId: string, semesterId: string, sectionData: Omit<Section, 'id'>) => {
     try {
         const batch = writeBatch(db);
-        const sectionCollectionRef = collection(db, 'colleges', COLLEGE_ID, 'degrees', degreeId, 'streams', streamId, 'batches', batchId, 'years', yearId, 'semesters', semesterId, 'sections');
+        const sectionCollectionRef = collection(db, 'colleges', COLLEGE_ID, 'degrees', degreeId, 'streams', streamId, 'batches', batchId, 'semesters', semesterId, 'sections');
         
         const newSectionRef = doc(sectionCollectionRef);
         batch.set(newSectionRef, sectionData);
@@ -32,9 +32,9 @@ export const addSection = async (degreeId: string, streamId: string, batchId: st
     }
 };
 
-export const getSections = async (degreeId: string, streamId: string, batchId: string, yearId: string, semesterId: string): Promise<Section[]> => {
+export const getSections = async (degreeId: string, streamId: string, batchId: string, semesterId: string): Promise<Section[]> => {
     try {
-        const sectionCollectionRef = collection(db, 'colleges', COLLEGE_ID, 'degrees', degreeId, 'streams', streamId, 'batches', batchId, 'years', yearId, 'semesters', semesterId, 'sections');
+        const sectionCollectionRef = collection(db, 'colleges', COLLEGE_ID, 'degrees', degreeId, 'streams', streamId, 'batches', batchId, 'semesters', semesterId, 'sections');
         const querySnapshot = await getDocs(sectionCollectionRef);
         const sections: Section[] = [];
         querySnapshot.forEach((doc) => {

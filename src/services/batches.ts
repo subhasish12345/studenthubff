@@ -20,26 +20,21 @@ export const deleteBatch = async (degreeId: string, streamId: string, batchId: s
         const fbBatch = writeBatch(db);
 
         // Delete all documents in all subcollections of the batch
-        const yearsCollectionRef = collection(batchRef, 'years');
-        const yearsSnapshot = await getDocs(yearsCollectionRef);
-        for (const yearDoc of yearsSnapshot.docs) {
-             const semestersCollectionRef = collection(yearDoc.ref, 'semesters');
-             const semestersSnapshot = await getDocs(semestersCollectionRef);
-             for(const semesterDoc of semestersSnapshot.docs) {
-                const sectionsCollectionRef = collection(semesterDoc.ref, 'sections');
-                const sectionsSnapshot = await getDocs(sectionsCollectionRef);
-                for (const sectionDoc of sectionsSnapshot.docs) {
-                    const dataCollections = ['students', 'teachers', 'subjects', 'assignments', 'notes', 'notice'];
-                    for(const colName of dataCollections) {
-                       const dataColRef = collection(sectionDoc.ref, colName);
-                       const dataSnapshot = await getDocs(dataColRef);
-                       dataSnapshot.forEach(d => fbBatch.delete(d.ref));
-                    }
-                    fbBatch.delete(sectionDoc.ref);
+        const semestersCollectionRef = collection(batchRef, 'semesters');
+        const semestersSnapshot = await getDocs(semestersCollectionRef);
+        for(const semesterDoc of semestersSnapshot.docs) {
+            const sectionsCollectionRef = collection(semesterDoc.ref, 'sections');
+            const sectionsSnapshot = await getDocs(sectionsCollectionRef);
+            for (const sectionDoc of sectionsSnapshot.docs) {
+                const dataCollections = ['students', 'teachers', 'subjects', 'assignments', 'notes', 'notice'];
+                for(const colName of dataCollections) {
+                   const dataColRef = collection(sectionDoc.ref, colName);
+                   const dataSnapshot = await getDocs(dataColRef);
+                   dataSnapshot.forEach(d => fbBatch.delete(d.ref));
                 }
-                fbBatch.delete(semesterDoc.ref);
-             }
-            fbBatch.delete(yearDoc.ref);
+                fbBatch.delete(sectionDoc.ref);
+            }
+            fbBatch.delete(semesterDoc.ref);
         }
 
         // Delete the batch document itself
@@ -61,30 +56,23 @@ export const addBatch = async (degreeId: string, streamId: string, duration: num
     const batchCollectionRef = collection(db, 'colleges', COLLEGE_ID, 'degrees', degreeId, 'streams', streamId, 'batches');
     const newBatchRef = doc(batchCollectionRef);
     fbBatch.set(newBatchRef, batchData);
+    
+    const totalSemesters = duration * 2;
 
-    for (let i = 1; i <= duration; i++) {
-        const yearSuffix = i === 1 ? 'st' : i === 2 ? 'nd' : i === 3 ? 'rd' : 'th';
-        const yearName = `${i}${yearSuffix} Year`;
-        const yearId = `${i}`;
-        const yearRef = doc(newBatchRef, 'years', yearId);
-        fbBatch.set(yearRef, { name: yearName });
+    for (let i = 1; i <= totalSemesters; i++) {
+        const semSuffix = i === 1 ? 'st' : i === 2 ? 'nd' : i === 3 ? 'rd' : 'th';
+        const semName = `${i}${semSuffix} Semester`;
+        const semId = `${i}-sem`;
+        const semesterRef = doc(newBatchRef, 'semesters', semId);
+        fbBatch.set(semesterRef, { name: semName });
 
-        for (let j = 1; j <= 2; j++) {
-            const semNumber = (i - 1) * 2 + j;
-            const semSuffix = semNumber === 1 ? 'st' : semNumber === 2 ? 'nd' : semNumber === 3 ? 'rd' : 'th';
-            const semName = `${semNumber}${semSuffix} Semester`;
-            const semId = `${semNumber}`;
-            const semesterRef = doc(yearRef, 'semesters', semId);
-            fbBatch.set(semesterRef, { name: semName });
+        const sectionRef = doc(semesterRef, 'sections', 'sec-a');
+        fbBatch.set(sectionRef, { name: 'Section A' });
 
-            const sectionRef = doc(semesterRef, 'sections', 'sec-a');
-            fbBatch.set(sectionRef, { name: 'Section A' });
-
-            const collectionsToCreate = ['students', 'teachers', 'subjects', 'assignments', 'notes', 'notice'];
-            for (const colName of collectionsToCreate) {
-                const placeholderRef = doc(sectionRef, colName, '_placeholder');
-                fbBatch.set(placeholderRef, { initialized: true });
-            }
+        const collectionsToCreate = ['students', 'teachers', 'subjects', 'assignments', 'notes', 'notice'];
+        for (const colName of collectionsToCreate) {
+            const placeholderRef = doc(sectionRef, colName, '_placeholder');
+            fbBatch.set(placeholderRef, { initialized: true });
         }
     }
 
