@@ -16,7 +16,9 @@ export const getSemestersForYear = async (degreeId: string, streamId: string, ba
     const querySnapshot = await getDocs(q);
     const semesters: Semester[] = [];
     querySnapshot.forEach((doc) => {
-      semesters.push({ id: doc.id, ...doc.data() } as Semester);
+        if (doc.id !== '_placeholder') {
+           semesters.push({ id: doc.id, ...doc.data() } as Semester);
+        }
     });
     return semesters;
   } catch (e) {

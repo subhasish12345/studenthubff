@@ -323,7 +323,6 @@ function ManageSectionsDialog({ degree, stream, batch }: { degree: Degree; strea
         const fetchSemesters = async () => {
             setIsLoadingSemesters(true);
             try {
-                const yearNumber = parseInt(selectedYear, 10);
                 const semesterData = await getSemestersForYear(degree.id, stream.id, batch.id, selectedYear);
                 setSemesters(semesterData);
                  if (semesterData.length > 0) setSelectedSemester(semesterData[0].id);
@@ -923,5 +922,3 @@ export default function AdminPage() {
         </div>
     );
 }
-
-    
