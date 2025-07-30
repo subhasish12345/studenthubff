@@ -18,6 +18,7 @@ import { addStream, getStreams, Stream } from '@/services/streams';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { createDegreeStructure } from '@/services/setup-collections';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { getYears, Year } from '@/services/years';
 
 
 const teachersData = [
@@ -200,7 +201,6 @@ function DeleteDegreeDialog({ degreeId, onDegreeDeleted }: { degreeId: string; o
             toast({ variant: "destructive", title: "Error", description: `Failed to delete degree: ${errorMessage}` });
         } finally {
             setIsLoading(false);
-            // The dialog will close automatically on action click if not prevented.
         }
     };
 
@@ -231,6 +231,70 @@ function DeleteDegreeDialog({ degreeId, onDegreeDeleted }: { degreeId: string; o
     );
 }
 
+function ManageBatchesDialog({ degree, stream }: { degree: Degree; stream: Stream }) {
+    const [years, setYears] = useState<Year[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const { toast } = useToast();
+    const [open, setOpen] = useState(false);
+
+    useEffect(() => {
+        if (open) {
+            const fetchYears = async () => {
+                setIsLoading(true);
+                try {
+                    const yearsData = await getYears(degree.id, stream.id);
+                    setYears(yearsData);
+                } catch (error) {
+                    toast({ variant: 'destructive', title: 'Error', description: 'Could not fetch years.' });
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+            fetchYears();
+        }
+    }, [open, degree.id, stream.id, toast]);
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                <Button variant="outline" size="sm">Manage Batches</Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[600px]">
+                <DialogHeader>
+                    <DialogTitle>Manage Batches for {degree.name} - {stream.name}</DialogTitle>
+                    <CardDescription>View years and manage batches for this stream.</CardDescription>
+                </DialogHeader>
+                <div className="py-4">
+                    {isLoading ? (
+                         <div className="p-4 text-center text-muted-foreground">
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin inline" /> Loading Years...
+                        </div>
+                    ) : years.length > 0 ? (
+                        <div className="space-y-4">
+                            {years.map(year => (
+                                <Card key={year.id}>
+                                    <CardHeader>
+                                        <CardTitle className="text-lg">{year.name}</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <p>Batch management UI will go here.</p>
+                                    </CardContent>
+                                </Card>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="p-4 text-center text-muted-foreground">No years found. The structure might not have been created correctly.</p>
+                    )}
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild>
+                        <Button type="button" variant="outline">Close</Button>
+                    </DialogClose>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
 
 function ManageStreamsDialog({ degree, onStreamAdded }: { degree: Degree, onStreamAdded: () => void }) {
     const [streamName, setStreamName] = useState('');
@@ -317,7 +381,7 @@ function ManageStreamsDialog({ degree, onStreamAdded }: { degree: Degree, onStre
                                         <TableRow key={stream.id}>
                                             <TableCell className="font-medium">{stream.name}</TableCell>
                                             <TableCell className="text-right">
-                                                <Button variant="outline" size="sm">Manage Batches</Button>
+                                                <ManageBatchesDialog degree={degree} stream={stream} />
                                             </TableCell>
                                         </TableRow>
                                     ))}
@@ -514,5 +578,3 @@ export default function AdminPage() {
         </div>
     );
 }
-
-    
