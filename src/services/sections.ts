@@ -9,16 +9,14 @@ export interface Section {
     name: string;
 }
 
-export const addSection = async (degreeId: string, streamId: string, batchId: string, yearId: string, sectionData: Omit<Section, 'id'>) => {
+export const addSection = async (degreeId: string, streamId: string, batchId: string, yearId: string, semesterId: string, sectionData: Omit<Section, 'id'>) => {
     try {
         const batch = writeBatch(db);
-        const sectionCollectionRef = collection(db, 'colleges', COLLEGE_ID, 'degrees', degreeId, 'streams', streamId, 'batches', batchId, 'years', yearId, 'sections');
+        const sectionCollectionRef = collection(db, 'colleges', COLLEGE_ID, 'degrees', degreeId, 'streams', streamId, 'batches', batchId, 'years', yearId, 'semesters', semesterId, 'sections');
         
-        // Create the new section document
-        const newSectionRef = doc(sectionCollectionRef); // Auto-generates an ID
+        const newSectionRef = doc(sectionCollectionRef);
         batch.set(newSectionRef, sectionData);
 
-        // Add placeholder documents to the subcollections within the new section
         const collectionsToCreate = ['students', 'teachers', 'subjects', 'assignments', 'notes', 'notice'];
         for (const colName of collectionsToCreate) {
             const placeholderRef = doc(newSectionRef, colName, '_placeholder');
@@ -34,9 +32,9 @@ export const addSection = async (degreeId: string, streamId: string, batchId: st
     }
 };
 
-export const getSections = async (degreeId: string, streamId: string, batchId: string, yearId: string): Promise<Section[]> => {
+export const getSections = async (degreeId: string, streamId: string, batchId: string, yearId: string, semesterId: string): Promise<Section[]> => {
     try {
-        const sectionCollectionRef = collection(db, 'colleges', COLLEGE_ID, 'degrees', degreeId, 'streams', streamId, 'batches', batchId, 'years', yearId, 'sections');
+        const sectionCollectionRef = collection(db, 'colleges', COLLEGE_ID, 'degrees', degreeId, 'streams', streamId, 'batches', batchId, 'years', yearId, 'semesters', semesterId, 'sections');
         const querySnapshot = await getDocs(sectionCollectionRef);
         const sections: Section[] = [];
         querySnapshot.forEach((doc) => {
@@ -50,4 +48,3 @@ export const getSections = async (degreeId: string, streamId: string, batchId: s
         throw new Error('Failed to fetch sections');
     }
 };
-    

@@ -22,6 +22,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Batch, addBatch, getBatchesForStream, deleteBatch } from '@/services/batches';
 import { Section, addSection, getSections } from '@/services/sections';
 import { Year, getYearsForBatch } from '@/services/years';
+import { Semester, getSemestersForYear } from '@/services/semesters';
 
 
 const teachersData = [
@@ -282,39 +283,60 @@ function DeleteBatchDialog({ degreeId, streamId, batchId, onBatchDeleted }: { de
 
 function ManageSectionsDialog({ degree, stream, batch }: { degree: Degree; stream: Stream; batch: Batch }) {
     const [open, setOpen] = useState(false);
-    const [isLoadingYears, setIsLoadingYears] = useState(true);
+    
     const [years, setYears] = useState<Year[]>([]);
+    const [isLoadingYears, setIsLoadingYears] = useState(true);
     const [selectedYear, setSelectedYear] = useState<string | null>(null);
+
+    const [semesters, setSemesters] = useState<Semester[]>([]);
+    const [isLoadingSemesters, setIsLoadingSemesters] = useState(false);
+    const [selectedSemester, setSelectedSemester] = useState<string | null>(null);
+
     const [sections, setSections] = useState<Section[]>([]);
     const [isLoadingSections, setIsLoadingSections] = useState(false);
+    
     const [newSectionName, setNewSectionName] = useState('');
     const [isAddingSection, setIsAddingSection] = useState(false);
     const { toast } = useToast();
 
     useEffect(() => {
         if (!open) return;
-        
         const fetchYears = async () => {
             setIsLoadingYears(true);
             try {
                 const yearData = await getYearsForBatch(degree.id, stream.id, batch.id);
                 setYears(yearData);
-                if (yearData.length > 0) {
-                    setSelectedYear(yearData[0].id);
-                }
-            } catch (error) {
-                toast({ variant: 'destructive', title: 'Error', description: 'Could not fetch academic years.' });
-            } finally {
-                setIsLoadingYears(false);
-            }
+                if (yearData.length > 0) setSelectedYear(yearData[0].id);
+                else setSelectedYear(null);
+            } catch (error) { toast({ variant: 'destructive', title: 'Error', description: 'Could not fetch academic years.' }); }
+            finally { setIsLoadingYears(false); }
         };
         fetchYears();
     }, [open, degree.id, stream.id, batch.id]);
 
-    const fetchSections = async (yearId: string) => {
+    useEffect(() => {
+        if (!selectedYear) {
+            setSemesters([]);
+            setSelectedSemester(null);
+            return;
+        };
+        const fetchSemesters = async () => {
+            setIsLoadingSemesters(true);
+            try {
+                const semesterData = await getSemestersForYear(degree.id, stream.id, batch.id, selectedYear);
+                setSemesters(semesterData);
+                 if (semesterData.length > 0) setSelectedSemester(semesterData[0].id);
+                 else setSelectedSemester(null);
+            } catch (error) { toast({ variant: 'destructive', title: 'Error', description: 'Could not fetch semesters.' }); }
+            finally { setIsLoadingSemesters(false); }
+        };
+        fetchSemesters();
+    }, [selectedYear]);
+
+    const fetchSections = async (yearId: string, semesterId: string) => {
         setIsLoadingSections(true);
         try {
-            const sectionsData = await getSections(degree.id, stream.id, batch.id, yearId);
+            const sectionsData = await getSections(degree.id, stream.id, batch.id, yearId, semesterId);
             setSections(sectionsData);
         } catch (error) {
             toast({ variant: 'destructive', title: 'Error', description: 'Could not fetch sections.' });
@@ -324,23 +346,25 @@ function ManageSectionsDialog({ degree, stream, batch }: { degree: Degree; strea
     };
     
     useEffect(() => {
-        if (selectedYear) {
-            fetchSections(selectedYear);
+        if (selectedYear && selectedSemester) {
+            fetchSections(selectedYear, selectedSemester);
+        } else {
+            setSections([]);
         }
-    }, [selectedYear]);
+    }, [selectedYear, selectedSemester]);
 
     const handleAddSection = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newSectionName || !selectedYear) {
+        if (!newSectionName || !selectedYear || !selectedSemester) {
             toast({ variant: 'destructive', title: 'Error', description: 'Please provide a section name.' });
             return;
         }
         setIsAddingSection(true);
         try {
-            await addSection(degree.id, stream.id, batch.id, selectedYear, { name: newSectionName });
+            await addSection(degree.id, stream.id, batch.id, selectedYear, selectedSemester, { name: newSectionName });
             toast({ title: 'Success', description: `Section "${newSectionName}" added.` });
             setNewSectionName('');
-            fetchSections(selectedYear); // Refresh the list
+            fetchSections(selectedYear, selectedSemester); // Refresh the list
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : "Failed to add section.";
             toast({ variant: 'destructive', title: 'Error', description: errorMessage });
@@ -354,33 +378,38 @@ function ManageSectionsDialog({ degree, stream, batch }: { degree: Degree; strea
             <DialogTrigger asChild>
                 <DropdownMenuItem onSelect={(e) => e.preventDefault()}>Manage Sections</DropdownMenuItem>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="sm:max-w-2xl">
                 <DialogHeader>
                     <DialogTitle>Manage Sections for {batch.name}</DialogTitle>
-                    <CardDescription>Add and view sections for each academic year of this batch.</CardDescription>
+                    <CardDescription>Add and view sections for each semester of this batch.</CardDescription>
                 </DialogHeader>
 
                 <div className="grid gap-4 py-4">
-                    <div>
-                        <Label htmlFor="year-select">Academic Year</Label>
-                        {isLoadingYears ? (
-                            <div className="flex items-center space-x-2 mt-1">
-                                <Loader2 className="h-4 w-4 animate-spin"/>
-                                <span>Loading years...</span>
-                            </div>
-                        ) : (
-                            <Select onValueChange={setSelectedYear} value={selectedYear || ''}>
-                                <SelectTrigger id="year-select" className="mt-1">
-                                    <SelectValue placeholder="Select an academic year" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {years.map(year => (
-                                        <SelectItem key={year.id} value={year.id}>{year.name}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        )}
+                    <div className="grid grid-cols-2 gap-4">
+                         <div>
+                            <Label htmlFor="year-select">Academic Year</Label>
+                            {isLoadingYears ? (
+                                <div className="flex items-center space-x-2 mt-1"><Loader2 className="h-4 w-4 animate-spin"/><span>Loading...</span></div>
+                            ) : (
+                                <Select onValueChange={setSelectedYear} value={selectedYear || ''}>
+                                    <SelectTrigger id="year-select" className="mt-1"><SelectValue placeholder="Select Year" /></SelectTrigger>
+                                    <SelectContent>{years.map(year => <SelectItem key={year.id} value={year.id}>{year.name}</SelectItem>)}</SelectContent>
+                                </Select>
+                            )}
+                        </div>
+                        <div>
+                            <Label htmlFor="semester-select">Semester</Label>
+                             {isLoadingSemesters ? (
+                                <div className="flex items-center space-x-2 mt-1"><Loader2 className="h-4 w-4 animate-spin"/><span>Loading...</span></div>
+                            ) : (
+                                <Select onValueChange={setSelectedSemester} value={selectedSemester || ''} disabled={!selectedYear}>
+                                    <SelectTrigger id="semester-select" className="mt-1"><SelectValue placeholder="Select Semester" /></SelectTrigger>
+                                    <SelectContent>{semesters.map(sem => <SelectItem key={sem.id} value={sem.id}>{sem.name}</SelectItem>)}</SelectContent>
+                                </Select>
+                            )}
+                        </div>
                     </div>
+                    
 
                     <div className="space-y-4">
                         <h3 className="font-semibold text-md">Existing Sections</h3>
@@ -394,14 +423,14 @@ function ManageSectionsDialog({ degree, stream, batch }: { degree: Degree; strea
                                             <TableRow key={section.id}>
                                                 <TableCell>{section.name}</TableCell>
                                                 <TableCell className="text-right">
-                                                    <Button variant="ghost" size="sm">Manage Students</Button>
+                                                    <Button variant="ghost" size="sm">Manage Section</Button>
                                                 </TableCell>
                                             </TableRow>
                                         ))}
                                     </TableBody>
                                 </Table>
                             ) : (
-                                <p className="p-4 text-center text-muted-foreground">No sections found for this year.</p>
+                                <p className="p-4 text-center text-muted-foreground">No sections found for this selection.</p>
                             )}
                         </div>
                     </div>
@@ -411,9 +440,9 @@ function ManageSectionsDialog({ degree, stream, batch }: { degree: Degree; strea
                             value={newSectionName}
                             onChange={(e) => setNewSectionName(e.target.value)}
                             placeholder="New section name (e.g. Section C)"
-                            disabled={isAddingSection || !selectedYear}
+                            disabled={isAddingSection || !selectedSemester}
                         />
-                        <Button type="submit" disabled={isAddingSection || !selectedYear}>
+                        <Button type="submit" disabled={isAddingSection || !selectedSemester}>
                            {isAddingSection ? <Loader2 className="h-4 w-4 animate-spin" /> : <PlusCircle className="h-4 w-4" />}
                            <span className="sr-only sm:not-sr-only sm:ml-2">Add Section</span>
                         </Button>

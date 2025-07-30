@@ -23,16 +23,21 @@ export const deleteBatch = async (degreeId: string, streamId: string, batchId: s
         const yearsCollectionRef = collection(batchRef, 'years');
         const yearsSnapshot = await getDocs(yearsCollectionRef);
         for (const yearDoc of yearsSnapshot.docs) {
-             const sectionsCollectionRef = collection(yearDoc.ref, 'sections');
-             const sectionsSnapshot = await getDocs(sectionsCollectionRef);
-             for (const sectionDoc of sectionsSnapshot.docs) {
-                 const dataCollections = ['students', 'teachers', 'subjects', 'assignments', 'notes', 'notice'];
-                 for(const colName of dataCollections) {
-                    const dataColRef = collection(sectionDoc.ref, colName);
-                    const dataSnapshot = await getDocs(dataColRef);
-                    dataSnapshot.forEach(d => fbBatch.delete(d.ref));
-                 }
-                 fbBatch.delete(sectionDoc.ref);
+             const semestersCollectionRef = collection(yearDoc.ref, 'semesters');
+             const semestersSnapshot = await getDocs(semestersCollectionRef);
+             for(const semesterDoc of semestersSnapshot.docs) {
+                const sectionsCollectionRef = collection(semesterDoc.ref, 'sections');
+                const sectionsSnapshot = await getDocs(sectionsCollectionRef);
+                for (const sectionDoc of sectionsSnapshot.docs) {
+                    const dataCollections = ['students', 'teachers', 'subjects', 'assignments', 'notes', 'notice'];
+                    for(const colName of dataCollections) {
+                       const dataColRef = collection(sectionDoc.ref, colName);
+                       const dataSnapshot = await getDocs(dataColRef);
+                       dataSnapshot.forEach(d => fbBatch.delete(d.ref));
+                    }
+                    fbBatch.delete(sectionDoc.ref);
+                }
+                fbBatch.delete(semesterDoc.ref);
              }
             fbBatch.delete(yearDoc.ref);
         }
@@ -53,27 +58,32 @@ export const addBatch = async (degreeId: string, streamId: string, duration: num
   try {
     const fbBatch = writeBatch(db);
 
-    // 1. Create the main batch document
     const batchCollectionRef = collection(db, 'colleges', COLLEGE_ID, 'degrees', degreeId, 'streams', streamId, 'batches');
-    const newBatchRef = doc(batchCollectionRef); // Create a new ref with a unique ID
+    const newBatchRef = doc(batchCollectionRef);
     fbBatch.set(newBatchRef, batchData);
 
-    // 2. Create Year subcollections within the batch
     for (let i = 1; i <= duration; i++) {
         const yearSuffix = i === 1 ? 'st' : i === 2 ? 'nd' : i === 3 ? 'rd' : 'th';
-        const yearName = `${i}${yearSuffix}-year`;
-        const yearRef = doc(newBatchRef, 'years', yearName);
-        fbBatch.set(yearRef, { name: `${i}${yearSuffix} Year` });
+        const yearName = `${i}${yearSuffix} Year`;
+        const yearId = `${i}${yearSuffix}-year`;
+        const yearRef = doc(newBatchRef, 'years', yearId);
+        fbBatch.set(yearRef, { name: yearName });
 
-        // 3. Create a default Section 'A' within each year
-        const sectionRef = doc(yearRef, 'sections', 'sec-a');
-        fbBatch.set(sectionRef, { name: 'Section A' });
+        for (let j = 1; j <= 2; j++) {
+            const semSuffix = j === 1 ? 'st' : 'nd';
+            const semName = `${j}${semSuffix} Semester`;
+            const semId = `${j}${semSuffix}-sem`;
+            const semesterRef = doc(yearRef, 'semesters', semId);
+            fbBatch.set(semesterRef, { name: semName });
 
-        // 4. Create placeholder documents in the final data collections
-        const collectionsToCreate = ['students', 'teachers', 'subjects', 'assignments', 'notes', 'notice'];
-        for (const colName of collectionsToCreate) {
-            const placeholderRef = doc(sectionRef, colName, '_placeholder');
-            fbBatch.set(placeholderRef, { initialized: true });
+            const sectionRef = doc(semesterRef, 'sections', 'sec-a');
+            fbBatch.set(sectionRef, { name: 'Section A' });
+
+            const collectionsToCreate = ['students', 'teachers', 'subjects', 'assignments', 'notes', 'notice'];
+            for (const colName of collectionsToCreate) {
+                const placeholderRef = doc(sectionRef, colName, '_placeholder');
+                fbBatch.set(placeholderRef, { initialized: true });
+            }
         }
     }
 
@@ -104,5 +114,3 @@ export const getBatchesForStream = async (degreeId: string, streamId: string): P
     throw new Error('Failed to fetch batches');
   }
 };
-
-    
