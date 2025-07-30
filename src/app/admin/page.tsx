@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -19,6 +20,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { createDegreeStructure } from '@/services/setup-collections';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Batch, addBatch, getBatchesForStream, deleteBatch } from '@/services/batches';
+import { Section, addSection, getSections } from '@/services/sections';
+import { Year, getYearsForBatch } from '@/services/years';
 
 
 const teachersData = [
@@ -276,6 +279,156 @@ function DeleteBatchDialog({ degreeId, streamId, batchId, onBatchDeleted }: { de
     );
 }
 
+
+function ManageSectionsDialog({ degree, stream, batch }: { degree: Degree; stream: Stream; batch: Batch }) {
+    const [open, setOpen] = useState(false);
+    const [isLoadingYears, setIsLoadingYears] = useState(true);
+    const [years, setYears] = useState<Year[]>([]);
+    const [selectedYear, setSelectedYear] = useState<string | null>(null);
+    const [sections, setSections] = useState<Section[]>([]);
+    const [isLoadingSections, setIsLoadingSections] = useState(false);
+    const [newSectionName, setNewSectionName] = useState('');
+    const [isAddingSection, setIsAddingSection] = useState(false);
+    const { toast } = useToast();
+
+    useEffect(() => {
+        if (!open) return;
+        
+        const fetchYears = async () => {
+            setIsLoadingYears(true);
+            try {
+                const yearData = await getYearsForBatch(degree.id, stream.id, batch.id);
+                setYears(yearData);
+                if (yearData.length > 0) {
+                    setSelectedYear(yearData[0].id);
+                }
+            } catch (error) {
+                toast({ variant: 'destructive', title: 'Error', description: 'Could not fetch academic years.' });
+            } finally {
+                setIsLoadingYears(false);
+            }
+        };
+        fetchYears();
+    }, [open, degree.id, stream.id, batch.id]);
+
+    const fetchSections = async (yearId: string) => {
+        setIsLoadingSections(true);
+        try {
+            const sectionsData = await getSections(degree.id, stream.id, batch.id, yearId);
+            setSections(sectionsData);
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not fetch sections.' });
+        } finally {
+            setIsLoadingSections(false);
+        }
+    };
+    
+    useEffect(() => {
+        if (selectedYear) {
+            fetchSections(selectedYear);
+        }
+    }, [selectedYear]);
+
+    const handleAddSection = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newSectionName || !selectedYear) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Please provide a section name.' });
+            return;
+        }
+        setIsAddingSection(true);
+        try {
+            await addSection(degree.id, stream.id, batch.id, selectedYear, { name: newSectionName });
+            toast({ title: 'Success', description: `Section "${newSectionName}" added.` });
+            setNewSectionName('');
+            fetchSections(selectedYear); // Refresh the list
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : "Failed to add section.";
+            toast({ variant: 'destructive', title: 'Error', description: errorMessage });
+        } finally {
+            setIsAddingSection(false);
+        }
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>Manage Sections</DropdownMenuItem>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Manage Sections for {batch.name}</DialogTitle>
+                    <CardDescription>Add and view sections for each academic year of this batch.</CardDescription>
+                </DialogHeader>
+
+                <div className="grid gap-4 py-4">
+                    <div>
+                        <Label htmlFor="year-select">Academic Year</Label>
+                        {isLoadingYears ? (
+                            <div className="flex items-center space-x-2 mt-1">
+                                <Loader2 className="h-4 w-4 animate-spin"/>
+                                <span>Loading years...</span>
+                            </div>
+                        ) : (
+                            <Select onValueChange={setSelectedYear} value={selectedYear || ''}>
+                                <SelectTrigger id="year-select" className="mt-1">
+                                    <SelectValue placeholder="Select an academic year" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {years.map(year => (
+                                        <SelectItem key={year.id} value={year.id}>{year.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        )}
+                    </div>
+
+                    <div className="space-y-4">
+                        <h3 className="font-semibold text-md">Existing Sections</h3>
+                        <div className="border rounded-md min-h-[100px] max-h-48 overflow-y-auto">
+                            {isLoadingSections ? (
+                                <div className="p-4 text-center text-muted-foreground"><Loader2 className="mr-2 h-4 w-4 animate-spin inline" /> Loading...</div>
+                            ) : sections.length > 0 ? (
+                                <Table>
+                                    <TableBody>
+                                        {sections.map(section => (
+                                            <TableRow key={section.id}>
+                                                <TableCell>{section.name}</TableCell>
+                                                <TableCell className="text-right">
+                                                    <Button variant="ghost" size="sm">Manage Students</Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            ) : (
+                                <p className="p-4 text-center text-muted-foreground">No sections found for this year.</p>
+                            )}
+                        </div>
+                    </div>
+                    
+                    <form onSubmit={handleAddSection} className="flex gap-2">
+                        <Input 
+                            value={newSectionName}
+                            onChange={(e) => setNewSectionName(e.target.value)}
+                            placeholder="New section name (e.g. Section C)"
+                            disabled={isAddingSection || !selectedYear}
+                        />
+                        <Button type="submit" disabled={isAddingSection || !selectedYear}>
+                           {isAddingSection ? <Loader2 className="h-4 w-4 animate-spin" /> : <PlusCircle className="h-4 w-4" />}
+                           <span className="sr-only sm:not-sr-only sm:ml-2">Add Section</span>
+                        </Button>
+                    </form>
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild>
+                        <Button type="button" variant="outline">Close</Button>
+                    </DialogClose>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
 function ManageBatchesDialog({ degree, stream }: { degree: Degree; stream: Stream }) {
     const [batches, setBatches] = useState<Batch[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -429,7 +582,7 @@ function ManageBatchesDialog({ degree, stream }: { degree: Degree; stream: Strea
                                                         </DropdownMenuTrigger>
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                            <DropdownMenuItem>Manage Sections</DropdownMenuItem>
+                                                            <ManageSectionsDialog degree={degree} stream={stream} batch={batch} />
                                                             <DropdownMenuItem>Edit Batch</DropdownMenuItem>
                                                             <DropdownMenuItem>Promote Batch</DropdownMenuItem>
                                                             <DropdownMenuSeparator />

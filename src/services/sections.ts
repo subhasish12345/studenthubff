@@ -1,6 +1,6 @@
 
 import { db } from '@/lib/firebase';
-import { collection, addDoc, getDocs, doc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, doc, writeBatch } from 'firebase/firestore';
 
 const COLLEGE_ID = 'GEC';
 
@@ -11,9 +11,23 @@ export interface Section {
 
 export const addSection = async (degreeId: string, streamId: string, batchId: string, yearId: string, sectionData: Omit<Section, 'id'>) => {
     try {
+        const batch = writeBatch(db);
         const sectionCollectionRef = collection(db, 'colleges', COLLEGE_ID, 'degrees', degreeId, 'streams', streamId, 'batches', batchId, 'years', yearId, 'sections');
-        const docRef = await addDoc(sectionCollectionRef, sectionData);
-        return docRef.id;
+        
+        // Create the new section document
+        const newSectionRef = doc(sectionCollectionRef); // Auto-generates an ID
+        batch.set(newSectionRef, sectionData);
+
+        // Add placeholder documents to the subcollections within the new section
+        const collectionsToCreate = ['students', 'teachers', 'subjects', 'assignments', 'notes', 'notice'];
+        for (const colName of collectionsToCreate) {
+            const placeholderRef = doc(newSectionRef, colName, '_placeholder');
+            batch.set(placeholderRef, { initialized: true });
+        }
+        
+        await batch.commit();
+        return newSectionRef.id;
+
     } catch (e) {
         console.error("Error adding section: ", e);
         throw new Error('Failed to add section');
@@ -30,11 +44,10 @@ export const getSections = async (degreeId: string, streamId: string, batchId: s
                 sections.push({ id: doc.id, ...doc.data() } as Section);
             }
         });
-        return sections;
+        return sections.sort((a,b) => a.name.localeCompare(b.name));
     } catch (e) {
         console.error("Error getting sections: ", e);
         throw new Error('Failed to fetch sections');
     }
 };
-
     
