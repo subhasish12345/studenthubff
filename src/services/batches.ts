@@ -29,22 +29,7 @@ export const deleteBatch = async (degreeId: string, streamId: string, batchId: s
             const semestersSnapshot = await getDocs(semestersCollectionRef);
 
             for (const semesterDoc of semestersSnapshot.docs) {
-                // For each semester, get all sections
-                const sectionsCollectionRef = collection(semesterDoc.ref, 'sections');
-                const sectionsSnapshot = await getDocs(sectionsCollectionRef);
-
-                for (const sectionDoc of sectionsSnapshot.docs) {
-                    // For each section, delete all subcollections (students, teachers, etc.)
-                    const dataCollections = ['students', 'teachers', 'subjects', 'assignments', 'notes', 'notice'];
-                    for (const colName of dataCollections) {
-                        const dataColRef = collection(sectionDoc.ref, colName);
-                        const dataSnapshot = await getDocs(dataColRef);
-                        dataSnapshot.forEach(d => fbBatch.delete(d.ref));
-                    }
-                    // Delete the section document itself
-                    fbBatch.delete(sectionDoc.ref);
-                }
-                // Delete the semester document
+                 // Delete the semester document
                 fbBatch.delete(semesterDoc.ref);
             }
             // Delete the year document
@@ -90,10 +75,6 @@ export const addBatch = async (degreeId: string, streamId: string, duration: num
 
         const semesterRef = doc(yearRef, 'semesters', semId);
         fbBatch.set(semesterRef, { name: semName });
-
-        // Add a placeholder for sections
-        const sectionsPlaceholderRef = doc(semesterRef, 'sections', '_placeholder');
-        fbBatch.set(sectionsPlaceholderRef, { initialized: true });
       }
     }
 
