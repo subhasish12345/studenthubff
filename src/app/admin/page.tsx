@@ -306,13 +306,19 @@ function ManageSectionsDialog({ degree, stream, batch }: { degree: Degree; strea
             try {
                 const yearData = await getYearsForBatch(degree.id, stream.id, batch.id);
                 setYears(yearData);
-                if (yearData.length > 0) setSelectedYear(yearData[0].id);
-                else setSelectedYear(null);
-            } catch (error) { toast({ variant: 'destructive', title: 'Error', description: 'Could not fetch academic years.' }); }
+                if (yearData.length > 0) {
+                    setSelectedYear(yearData[0].id);
+                } else {
+                    setSelectedYear(null);
+                }
+            } catch (error) { 
+                console.error(error);
+                toast({ variant: 'destructive', title: 'Error', description: 'Could not fetch academic years.' }); 
+            }
             finally { setIsLoadingYears(false); }
         };
         fetchYears();
-    }, [open, degree.id, stream.id, batch.id]);
+    }, [open, degree.id, stream.id, batch.id, toast]);
 
     useEffect(() => {
         if (!selectedYear) {
@@ -320,38 +326,45 @@ function ManageSectionsDialog({ degree, stream, batch }: { degree: Degree; strea
             setSelectedSemester(null);
             return;
         };
+
         const fetchSemesters = async () => {
             setIsLoadingSemesters(true);
+            setSemesters([]); // Clear previous semesters
+            setSelectedSemester(null); // Reset selected semester
             try {
                 const semesterData = await getSemestersForYear(degree.id, stream.id, batch.id, selectedYear);
                 setSemesters(semesterData);
-                 if (semesterData.length > 0) setSelectedSemester(semesterData[0].id);
-                 else setSelectedSemester(null);
-            } catch (error) { toast({ variant: 'destructive', title: 'Error', description: 'Could not fetch semesters.' }); }
+                 if (semesterData.length > 0) {
+                    setSelectedSemester(semesterData[0].id);
+                 }
+            } catch (error) { 
+                console.error(error);
+                toast({ variant: 'destructive', title: 'Error', description: 'Could not fetch semesters.' }); 
+            }
             finally { setIsLoadingSemesters(false); }
         };
         fetchSemesters();
-    }, [selectedYear, degree.id, stream.id, batch.id]);
-
-    const fetchSections = async (yearId: string, semesterId: string) => {
-        setIsLoadingSections(true);
-        try {
-            const sectionsData = await getSections(degree.id, stream.id, batch.id, yearId, semesterId);
-            setSections(sectionsData);
-        } catch (error) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Could not fetch sections.' });
-        } finally {
-            setIsLoadingSections(false);
-        }
-    };
+    }, [selectedYear, degree.id, stream.id, batch.id, toast]);
     
     useEffect(() => {
         if (selectedYear && selectedSemester) {
-            fetchSections(selectedYear, selectedSemester);
+            const fetchSections = async () => {
+                setIsLoadingSections(true);
+                try {
+                    const sectionsData = await getSections(degree.id, stream.id, batch.id, selectedYear, selectedSemester);
+                    setSections(sectionsData);
+                } catch (error) {
+                    console.error(error);
+                    toast({ variant: 'destructive', title: 'Error', description: 'Could not fetch sections.' });
+                } finally {
+                    setIsLoadingSections(false);
+                }
+            };
+            fetchSections();
         } else {
             setSections([]);
         }
-    }, [selectedYear, selectedSemester, degree.id, stream.id, batch.id]);
+    }, [selectedYear, selectedSemester, degree.id, stream.id, batch.id, toast]);
 
     const handleAddSection = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -364,7 +377,11 @@ function ManageSectionsDialog({ degree, stream, batch }: { degree: Degree; strea
             await addSection(degree.id, stream.id, batch.id, selectedYear, selectedSemester, { name: newSectionName });
             toast({ title: 'Success', description: `Section "${newSectionName}" added.` });
             setNewSectionName('');
-            fetchSections(selectedYear, selectedSemester); // Refresh the list
+            
+            // Refresh the list after adding
+            const sectionsData = await getSections(degree.id, stream.id, batch.id, selectedYear, selectedSemester);
+            setSections(sectionsData);
+            
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : "Failed to add section.";
             toast({ variant: 'destructive', title: 'Error', description: errorMessage });
