@@ -374,7 +374,7 @@ function ManageSectionsDialog({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-xl overflow-visible">
+            <DialogContent className="sm:max-w-xl">
                 <DialogHeader>
                     <DialogTitle>Manage Sections for {batch.name}</DialogTitle>
                     <CardDescription>Add and view sections for each semester of this batch.</CardDescription>
