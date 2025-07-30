@@ -15,35 +15,52 @@ const COLLEGE_ID = 'GEC'; // Hardcoding college ID as per the plan
 // This function recursively deletes a document and all its subcollections.
 async function deleteCollection(collectionRef: any, batch: any) {
     const snapshot = await getDocs(collectionRef);
-    const promises: Promise<any>[] = [];
-    snapshot.forEach((doc) => {
-        promises.push(deleteDocument(doc.ref, batch));
-    });
-    await Promise.all(promises);
-}
-
-async function deleteDocument(docRef: any, batch: any) {
-    const subcollections = ['streams', 'years', 'batches', 'students', 'teachers', 'subjects', 'assignments', 'notes'];
-    const promises: Promise<any>[] = [];
-
-    for (const sub of subcollections) {
-        const subcollectionRef = collection(docRef, sub);
-        promises.push(deleteCollection(subcollectionRef, batch));
+    if (snapshot.size === 0) {
+        return;
     }
-    
-    await Promise.all(promises);
-    batch.delete(docRef);
+    snapshot.forEach((doc) => {
+        batch.delete(doc.ref);
+        // Recursively delete subcollections
+        const subcollections = ['years', 'semesters', 'sections', 'students', 'teachers', 'subjects', 'assignments', 'notes', 'notice'];
+        subcollections.forEach(sub => {
+            deleteCollection(collection(doc.ref, sub), batch);
+        });
+    });
 }
 
 export const deleteDegree = async (degreeId: string) => {
     try {
         const degreeRef = doc(db, 'colleges', COLLEGE_ID, 'degrees', degreeId);
-        const batch = writeBatch(db);
+        const fbBatch = writeBatch(db);
 
-        // Start recursive deletion from the degree document
-        await deleteDocument(degreeRef, batch);
+        // Delete subcollections of degree
+        const streamsCollectionRef = collection(degreeRef, 'streams');
+        const streamsSnapshot = await getDocs(streamsCollectionRef);
+        for(const streamDoc of streamsSnapshot.docs) {
+             const batchesCollectionRef = collection(streamDoc.ref, 'batches');
+             const batchesSnapshot = await getDocs(batchesCollectionRef);
+             for(const batchDoc of batchesSnapshot.docs){
+                const yearsCollectionRef = collection(batchDoc.ref, 'years');
+                const yearsSnapshot = await getDocs(yearsCollectionRef);
+                for(const yearDoc of yearsSnapshot.docs){
+                   const semestersCollectionRef = collection(yearDoc.ref, 'semesters');
+                   const semestersSnapshot = await getDocs(semestersCollectionRef);
+                   for(const semesterDoc of semestersSnapshot.docs){
+                      const sectionsCollectionRef = collection(semesterDoc.ref, 'sections');
+                      await deleteCollection(sectionsCollectionRef, fbBatch);
+                      fbBatch.delete(semesterDoc.ref);
+                   }
+                   fbBatch.delete(yearDoc.ref);
+                }
+                fbBatch.delete(batchDoc.ref);
+             }
+             fbBatch.delete(streamDoc.ref);
+        }
+
+        // Finally, delete the degree document itself
+        fbBatch.delete(degreeRef);
         
-        await batch.commit();
+        await fbBatch.commit();
     } catch (e) {
         console.error("Error deleting degree and its subcollections: ", e);
         throw new Error('Failed to delete degree');
@@ -115,3 +132,4 @@ export const updateDegree = async (degreeId: string, data: Partial<Omit<Degree, 
     }
 };
 
+    
