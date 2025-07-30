@@ -65,14 +65,15 @@ export const addBatch = async (degreeId: string, streamId: string, duration: num
     for (let i = 1; i <= duration; i++) {
         const yearSuffix = i === 1 ? 'st' : i === 2 ? 'nd' : i === 3 ? 'rd' : 'th';
         const yearName = `${i}${yearSuffix} Year`;
-        const yearId = `${i}${yearSuffix}-year`;
+        const yearId = `${i}`;
         const yearRef = doc(newBatchRef, 'years', yearId);
         fbBatch.set(yearRef, { name: yearName });
 
         for (let j = 1; j <= 2; j++) {
-            const semSuffix = j === 1 ? 'st' : 'nd';
-            const semName = `${j}${semSuffix} Semester`;
-            const semId = `${j}${semSuffix}-sem`;
+            const semNumber = (i - 1) * 2 + j;
+            const semSuffix = semNumber === 1 ? 'st' : semNumber === 2 ? 'nd' : semNumber === 3 ? 'rd' : 'th';
+            const semName = `${semNumber}${semSuffix} Semester`;
+            const semId = `${semNumber}`;
             const semesterRef = doc(yearRef, 'semesters', semId);
             fbBatch.set(semesterRef, { name: semName });
 

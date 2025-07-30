@@ -323,6 +323,7 @@ function ManageSectionsDialog({ degree, stream, batch }: { degree: Degree; strea
         const fetchSemesters = async () => {
             setIsLoadingSemesters(true);
             try {
+                const yearNumber = parseInt(selectedYear, 10);
                 const semesterData = await getSemestersForYear(degree.id, stream.id, batch.id, selectedYear);
                 setSemesters(semesterData);
                  if (semesterData.length > 0) setSelectedSemester(semesterData[0].id);
@@ -331,7 +332,7 @@ function ManageSectionsDialog({ degree, stream, batch }: { degree: Degree; strea
             finally { setIsLoadingSemesters(false); }
         };
         fetchSemesters();
-    }, [selectedYear]);
+    }, [selectedYear, degree.id, stream.id, batch.id]);
 
     const fetchSections = async (yearId: string, semesterId: string) => {
         setIsLoadingSections(true);
@@ -351,7 +352,7 @@ function ManageSectionsDialog({ degree, stream, batch }: { degree: Degree; strea
         } else {
             setSections([]);
         }
-    }, [selectedYear, selectedSemester]);
+    }, [selectedYear, selectedSemester, degree.id, stream.id, batch.id]);
 
     const handleAddSection = async (e: React.FormEvent) => {
         e.preventDefault();
