@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { PlusCircle, MoreHorizontal, Loader2, Edit, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose, DialogPortal } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
@@ -297,8 +297,8 @@ function ManageSectionsDialog({
     const [semesters, setSemesters] = useState<Semester[]>([]);
     const [sections, setSections] = useState<Section[]>([]);
     
-    const [selectedYear, setSelectedYear] = useState<Year | null>(null);
-    const [selectedSemester, setSelectedSemester] = useState<Semester | null>(null);
+    const [selectedYearId, setSelectedYearId] = useState<string | null>(null);
+    const [selectedSemesterId, setSelectedSemesterId] = useState<string | null>(null);
 
     const [isYearsLoading, setIsYearsLoading] = useState(true);
     const [isSemestersLoading, setIsSemestersLoading] = useState(false);
@@ -311,8 +311,8 @@ function ManageSectionsDialog({
         setYears([]);
         setSemesters([]);
         setSections([]);
-        setSelectedYear(null);
-        setSelectedSemester(null);
+        setSelectedYearId(null);
+        setSelectedSemesterId(null);
         setNewSectionName('');
         setIsYearsLoading(true);
     }
@@ -328,47 +328,47 @@ function ManageSectionsDialog({
         } else {
             resetState();
         }
-    }, [open, degree, stream, batch]);
+    }, [open, degree, stream, batch, toast]);
 
     // Fetch semesters when a year is selected
     useEffect(() => {
         setSemesters([]);
-        setSelectedSemester(null);
+        setSelectedSemesterId(null);
         setSections([]);
-        if (selectedYear && degree && stream && batch) {
+        if (selectedYearId && degree && stream && batch) {
             setIsSemestersLoading(true);
-            getSemestersForYear(degree.id, stream.id, batch.id, selectedYear.id)
+            getSemestersForYear(degree.id, stream.id, batch.id, selectedYearId)
                 .then(setSemesters)
                 .catch(() => toast({ variant: 'destructive', title: 'Error', description: 'Could not fetch semesters.' }))
                 .finally(() => setIsSemestersLoading(false));
         }
-    }, [selectedYear, degree, stream, batch]);
+    }, [selectedYearId, degree, stream, batch, toast]);
 
      // Fetch sections when a semester is selected
     useEffect(() => {
         setSections([]);
-        if (selectedSemester && selectedYear && degree && stream && batch) {
+        if (selectedSemesterId && selectedYearId && degree && stream && batch) {
             setIsSectionsLoading(true);
-            getSectionsForSemester(degree.id, stream.id, batch.id, selectedYear.id, selectedSemester.id)
+            getSectionsForSemester(degree.id, stream.id, batch.id, selectedYearId, selectedSemesterId)
                 .then(setSections)
                 .catch(() => toast({ variant: 'destructive', title: 'Error', description: 'Could not fetch sections.' }))
                 .finally(() => setIsSectionsLoading(false));
         }
-    }, [selectedSemester, selectedYear, degree, stream, batch]);
+    }, [selectedSemesterId, selectedYearId, degree, stream, batch, toast]);
 
     const handleAddSection = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newSectionName || !selectedYear || !selectedSemester || !degree || !stream || !batch) {
+        if (!newSectionName || !selectedYearId || !selectedSemesterId || !degree || !stream || !batch) {
              toast({ variant: 'destructive', title: 'Error', description: 'Please select year, semester and provide a section name.' });
             return;
         }
         setIsAddingSection(true);
         try {
-            await addSection(degree.id, stream.id, batch.id, selectedYear.id, selectedSemester.id, { name: newSectionName });
+            await addSection(degree.id, stream.id, batch.id, selectedYearId, selectedSemesterId, { name: newSectionName });
             toast({ title: 'Success', description: `Section "${newSectionName}" added.` });
             setNewSectionName('');
             // Refresh sections list
-            const updatedSections = await getSectionsForSemester(degree.id, stream.id, batch.id, selectedYear.id, selectedSemester.id);
+            const updatedSections = await getSectionsForSemester(degree.id, stream.id, batch.id, selectedYearId, selectedSemesterId);
             setSections(updatedSections);
         } catch (error) {
             toast({ variant: 'destructive', title: 'Error', description: 'Failed to add section.' });
@@ -393,7 +393,7 @@ function ManageSectionsDialog({
                         <div className='space-y-2'>
                             <Label>Academic Year</Label>
                             {isYearsLoading ? <Loader2 className="animate-spin" /> : (
-                                <Select onValueChange={id => setSelectedYear(years.find(y => y.id === id) || null)} value={selectedYear?.id || ''}>
+                                <Select onValueChange={setSelectedYearId} value={selectedYearId || ''}>
                                     <SelectTrigger><SelectValue placeholder="Select a year..." /></SelectTrigger>
                                     <SelectContent>
                                         {years.map(y => <SelectItem key={y.id} value={y.id}>{y.name}</SelectItem>)}
@@ -404,7 +404,7 @@ function ManageSectionsDialog({
                          <div className='space-y-2'>
                             <Label>Semester</Label>
                             {isSemestersLoading ? <Loader2 className="animate-spin" /> : (
-                                <Select onValueChange={id => setSelectedSemester(semesters.find(s => s.id === id) || null)} value={selectedSemester?.id || ''} disabled={!selectedYear}>
+                                <Select onValueChange={setSelectedSemesterId} value={selectedSemesterId || ''} disabled={!selectedYearId}>
                                     <SelectTrigger><SelectValue placeholder="Select a semester..." /></SelectTrigger>
                                     <SelectContent>
                                         {semesters.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
@@ -412,7 +412,7 @@ function ManageSectionsDialog({
                                 </Select>
                             )}
                         </div>
-                        {selectedSemester && (
+                        {selectedSemesterId && (
                             <form onSubmit={handleAddSection} className="flex gap-2 pt-4">
                                 <Input 
                                     value={newSectionName}
@@ -432,7 +432,7 @@ function ManageSectionsDialog({
                         <h3 className="font-semibold text-lg">Existing Sections</h3>
                          <div className="border rounded-md min-h-48">
                              {isSectionsLoading ? (
-                                <div className="p-4 text-center text-muted-foreground"><Loader2 className="animate-spin" /></div>
+                                <div className="flex items-center justify-center p-4 text-muted-foreground"><Loader2 className="animate-spin" /></div>
                              ) : sections.length > 0 ? (
                                 <Table>
                                     <TableHeader>
@@ -454,7 +454,7 @@ function ManageSectionsDialog({
                                 </Table>
                              ) : (
                                 <p className="p-4 text-center text-muted-foreground">
-                                    {selectedSemester ? "No sections found. Add one." : "Select a year and semester."}
+                                    {selectedSemesterId ? "No sections found. Add one." : "Select a year and semester."}
                                 </p>
                              )}
                         </div>
@@ -492,7 +492,7 @@ function ManageBatchesDialog({
 
     const { toast } = useToast();
     
-    const fetchBatches = async () => {
+    const fetchBatches = React.useCallback(async () => {
         if (!degree || !stream) return;
         setIsLoading(true);
         try {
@@ -503,13 +503,13 @@ function ManageBatchesDialog({
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [degree, stream, toast]);
     
     useEffect(() => {
         if (open && degree && stream) {
            fetchBatches();
         }
-    }, [open, degree, stream]);
+    }, [open, degree, stream, fetchBatches]);
 
     useEffect(() => {
         if(degree) {
@@ -684,7 +684,7 @@ function ManageStreamsDialog({
     const [isFetchingStreams, setIsFetchingStreams] = useState(true);
     const { toast } = useToast();
 
-    const fetchStreams = async () => {
+    const fetchStreams = React.useCallback(async () => {
         if (!degree) return;
         setIsFetchingStreams(true);
         try {
@@ -695,13 +695,13 @@ function ManageStreamsDialog({
         } finally {
             setIsFetchingStreams(false);
         }
-    }
+    }, [degree, toast]);
 
     useEffect(() => {
         if (open) {
             fetchStreams();
         }
-    }, [open, degree]);
+    }, [open, fetchStreams]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -1012,5 +1012,3 @@ export default function AdminPage() {
         </div>
     );
 }
-
-    
