@@ -13,10 +13,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { getDegrees, Degree, updateDegree } from '@/services/degrees';
+import { getDegrees, Degree, updateDegree, deleteDegree } from '@/services/degrees';
 import { addStream, getStreams, Stream } from '@/services/streams';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { createDegreeStructure } from '@/services/setup-collections';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 
 const teachersData = [
@@ -182,6 +183,54 @@ function EditDegreeDialog({ degree, onDegreeUpdated }: { degree: Degree, onDegre
         </Dialog>
     );
 }
+
+function DeleteDegreeDialog({ degreeId, onDegreeDeleted }: { degreeId: string; onDegreeDeleted: () => void }) {
+    const [isLoading, setIsLoading] = useState(false);
+    const { toast } = useToast();
+
+    const handleDelete = async () => {
+        setIsLoading(true);
+        try {
+            await deleteDegree(degreeId);
+            toast({ title: "Success", description: "Degree and all its data have been deleted." });
+            onDegreeDeleted();
+        } catch (error) {
+            console.error("Error deleting degree: ", error);
+            const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+            toast({ variant: "destructive", title: "Error", description: `Failed to delete degree: ${errorMessage}` });
+        } finally {
+            setIsLoading(false);
+            // The dialog will close automatically on action click if not prevented.
+        }
+    };
+
+    return (
+        <AlertDialog>
+            <AlertDialogTrigger asChild>
+                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
+                    <Trash2 className="mr-2 h-4 w-4" /> Delete Degree
+                </DropdownMenuItem>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete the degree
+                        and all associated streams, years, batches, students, teachers, and other data.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete} disabled={isLoading} className="bg-destructive hover:bg-destructive/90">
+                        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Yes, delete it
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    );
+}
+
 
 function ManageStreamsDialog({ degree, onStreamAdded }: { degree: Degree, onStreamAdded: () => void }) {
     const [streamName, setStreamName] = useState('');
@@ -373,9 +422,7 @@ export default function AdminPage() {
                                                         <DropdownMenuContent align="end">
                                                             <EditDegreeDialog degree={degree} onDegreeUpdated={fetchDegrees} />
                                                             <ManageStreamsDialog degree={degree} onStreamAdded={fetchDegrees} />
-                                                            <DropdownMenuItem className="text-destructive focus:text-destructive">
-                                                              <Trash2 className="mr-2 h-4 w-4" /> Delete Degree
-                                                            </DropdownMenuItem>
+                                                            <DeleteDegreeDialog degreeId={degree.id} onDegreeDeleted={fetchDegrees} />
                                                         </DropdownMenuContent>
                                                     </DropdownMenu>
                                                 </TableCell>

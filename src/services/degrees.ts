@@ -1,6 +1,6 @@
 
 import { db } from '@/lib/firebase';
-import { collection, addDoc, getDocs, doc, setDoc, query, where, updateDoc, increment, getDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, doc, setDoc, query, where, updateDoc, increment, getDoc, deleteDoc, writeBatch, collectionGroup } from 'firebase/firestore';
 
 // Define the structure of a Degree object
 export interface Degree {
@@ -11,6 +11,45 @@ export interface Degree {
 }
 
 const COLLEGE_ID = 'GEC'; // Hardcoding college ID as per the plan
+
+// This function recursively deletes a document and all its subcollections.
+async function deleteCollection(collectionRef: any, batch: any) {
+    const snapshot = await getDocs(collectionRef);
+    const promises: Promise<any>[] = [];
+    snapshot.forEach((doc) => {
+        promises.push(deleteDocument(doc.ref, batch));
+    });
+    await Promise.all(promises);
+}
+
+async function deleteDocument(docRef: any, batch: any) {
+    const subcollections = ['streams', 'years', 'batches', 'students', 'teachers', 'subjects', 'assignments', 'notes'];
+    const promises: Promise<any>[] = [];
+
+    for (const sub of subcollections) {
+        const subcollectionRef = collection(docRef, sub);
+        promises.push(deleteCollection(subcollectionRef, batch));
+    }
+    
+    await Promise.all(promises);
+    batch.delete(docRef);
+}
+
+export const deleteDegree = async (degreeId: string) => {
+    try {
+        const degreeRef = doc(db, 'colleges', COLLEGE_ID, 'degrees', degreeId);
+        const batch = writeBatch(db);
+
+        // Start recursive deletion from the degree document
+        await deleteDocument(degreeRef, batch);
+        
+        await batch.commit();
+    } catch (e) {
+        console.error("Error deleting degree and its subcollections: ", e);
+        throw new Error('Failed to delete degree');
+    }
+};
+
 
 // This function is now mostly for reading degrees. 
 // The creation is handled by setup-collections.ts
@@ -75,3 +114,4 @@ export const updateDegree = async (degreeId: string, data: Partial<Omit<Degree, 
         throw new Error('Failed to update degree');
     }
 };
+
