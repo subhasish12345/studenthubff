@@ -331,7 +331,7 @@ function ManageBatchesDialog({
         }
         setIsCreating(true);
         try {
-            const newBatch: Omit<Batch, 'id' | 'currentYear'> = {
+            const newBatch: Omit<Batch, 'id'> = {
                 name: batchName,
                 startYear,
                 endYear,
@@ -440,7 +440,6 @@ function ManageBatchesDialog({
                                                         </DropdownMenuTrigger>
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                            <DropdownMenuItem>Manage Sections</DropdownMenuItem>
                                                             <DropdownMenuItem>Edit Batch</DropdownMenuItem>
                                                             <DropdownMenuItem>Promote Batch</DropdownMenuItem>
                                                             <DropdownMenuSeparator />
@@ -623,11 +622,13 @@ export default function AdminPage() {
     };
 
     const handleManageBatches = (stream: Stream) => {
+        // This function now opens the ManageBatchesDialog.
+        // We ensure selectedDegree is already set when we open the streams dialog.
         setSelectedStream(stream);
-        setIsStreamsDialogOpen(false);
-        setIsBatchesDialogOpen(true);
+        setIsStreamsDialogOpen(false); // Close the streams dialog
+        setIsBatchesDialogOpen(true);  // Open the batches dialog
     };
-
+    
     return (
         <div className="flex flex-col gap-8">
             <div>
