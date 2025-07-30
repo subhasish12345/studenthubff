@@ -74,5 +74,3 @@ export const createDegreeStructure = async (degreeName: string, duration: number
     // Commit the batch write to execute all operations
     await batch.commit();
 };
-
-    
