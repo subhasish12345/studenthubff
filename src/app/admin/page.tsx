@@ -18,7 +18,7 @@ import { addStream, getStreams, Stream } from '@/services/streams';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { createDegreeStructure } from '@/services/setup-collections';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { getYears, Year } from '@/services/years';
+import { Batch, addBatch, getBatchesForStream } from '@/services/batches';
 
 
 const teachersData = [
@@ -232,60 +232,162 @@ function DeleteDegreeDialog({ degreeId, onDegreeDeleted }: { degreeId: string; o
 }
 
 function ManageBatchesDialog({ degree, stream }: { degree: Degree; stream: Stream }) {
-    const [years, setYears] = useState<Year[]>([]);
+    const [batches, setBatches] = useState<Batch[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isCreating, setIsCreating] = useState(false);
+    const [batchName, setBatchName] = useState('');
+    const [startYear, setStartYear] = useState<number>(new Date().getFullYear());
+    const [endYear, setEndYear] = useState<number>(new Date().getFullYear() + degree.duration);
+
     const { toast } = useToast();
     const [open, setOpen] = useState(false);
 
+    const fetchBatches = async () => {
+        setIsLoading(true);
+        try {
+            const batchesData = await getBatchesForStream(degree.id, stream.id);
+            setBatches(batchesData);
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not fetch batches.' });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    
     useEffect(() => {
         if (open) {
-            const fetchYears = async () => {
-                setIsLoading(true);
-                try {
-                    const yearsData = await getYears(degree.id, stream.id);
-                    setYears(yearsData);
-                } catch (error) {
-                    toast({ variant: 'destructive', title: 'Error', description: 'Could not fetch years.' });
-                } finally {
-                    setIsLoading(false);
-                }
-            };
-            fetchYears();
+           fetchBatches();
         }
-    }, [open, degree.id, stream.id, toast]);
+    }, [open, degree.id, stream.id]);
+
+    useEffect(() => {
+        setEndYear(startYear + degree.duration);
+        setBatchName(`${startYear}-${startYear + degree.duration} Batch`);
+    }, [startYear, degree.duration]);
+
+    const handleAddBatch = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!batchName || !startYear || !endYear) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Please fill all batch fields.' });
+            return;
+        }
+        setIsCreating(true);
+        try {
+            const newBatch: Omit<Batch, 'id' | 'currentYear'> = {
+                name: batchName,
+                startYear,
+                endYear,
+                promotedYears: 0,
+                startMonth: 8, // August
+            };
+            await addBatch(degree.id, stream.id, newBatch);
+            toast({ title: 'Success', description: 'New batch created.' });
+            setBatchName('');
+            setStartYear(new Date().getFullYear());
+            fetchBatches(); // Refresh list
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : "Failed to create batch.";
+            toast({ variant: 'destructive', title: 'Error', description: errorMessage });
+        } finally {
+            setIsCreating(false);
+        }
+    };
+
+    const calculateCurrentYear = (batch: Batch) => {
+        const currentMonth = new Date().getMonth() + 1;
+        const currentFullYear = new Date().getFullYear();
+        let academicYear = currentFullYear - batch.startYear;
+        if (currentMonth < batch.startMonth) {
+            academicYear--;
+        }
+        academicYear++; 
+        academicYear += batch.promotedYears;
+
+        if (academicYear > (batch.endYear - batch.startYear)) return 'Graduated';
+        if (academicYear <= 0) return 'Not Started';
+
+        switch (academicYear) {
+            case 1: return '1st Year';
+            case 2: return '2nd Year';
+            case 3: return '3rd Year';
+            default: return `${academicYear}th Year`;
+        }
+    };
+
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
                 <Button variant="outline" size="sm">Manage Batches</Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px]">
+            <DialogContent className="sm:max-w-[800px]">
                 <DialogHeader>
                     <DialogTitle>Manage Batches for {degree.name} - {stream.name}</DialogTitle>
-                    <CardDescription>View years and manage batches for this stream.</CardDescription>
+                    <CardDescription>Create new batches and manage existing ones for this stream.</CardDescription>
                 </DialogHeader>
-                <div className="py-4">
-                    {isLoading ? (
-                         <div className="p-4 text-center text-muted-foreground">
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin inline" /> Loading Years...
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-4">
+                    {/* Add Batch Form */}
+                    <div className="space-y-4">
+                        <h3 className="font-semibold text-lg">Create New Batch</h3>
+                        <form onSubmit={handleAddBatch} className="space-y-4">
+                             <div>
+                                <Label htmlFor="batch-name">Batch Name</Label>
+                                <Input id="batch-name" value={batchName} onChange={e => setBatchName(e.target.value)} placeholder="e.g., 2024-2028 Batch" />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <Label htmlFor="start-year">Start Year</Label>
+                                    <Input id="start-year" type="number" value={startYear} onChange={e => setStartYear(parseInt(e.target.value, 10))} />
+                                </div>
+                                <div>
+                                    <Label htmlFor="end-year">End Year</Label>
+                                    <Input id="end-year" type="number" value={endYear} readOnly />
+                                </div>
+                            </div>
+                            <Button type="submit" className="w-full" disabled={isCreating}>
+                                {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Add Batch
+                            </Button>
+                        </form>
+                    </div>
+
+                    {/* Existing Batches List */}
+                    <div className="space-y-4">
+                        <h3 className="font-semibold text-lg">Existing Batches</h3>
+                         <div className="border rounded-md max-h-72 overflow-y-auto">
+                            {isLoading ? (
+                                <div className="p-4 text-center text-muted-foreground">
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin inline" /> Loading Batches...
+                                </div>
+                            ) : batches.length > 0 ? (
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Batch</TableHead>
+                                            <TableHead>Current Year</TableHead>
+                                            <TableHead className="text-right">Actions</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {batches.map(batch => (
+                                            <TableRow key={batch.id}>
+                                                <TableCell className="font-medium">{batch.name}</TableCell>
+                                                <TableCell><Badge variant="secondary">{calculateCurrentYear(batch)}</Badge></TableCell>
+                                                <TableCell className="text-right">
+                                                    <Button variant="ghost" size="sm">Promote</Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            ) : (
+                                <p className="p-4 text-center text-muted-foreground">No batches found. Create one to start.</p>
+                            )}
                         </div>
-                    ) : years.length > 0 ? (
-                        <div className="space-y-4">
-                            {years.map(year => (
-                                <Card key={year.id}>
-                                    <CardHeader>
-                                        <CardTitle className="text-lg">{year.name}</CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <p>Batch management UI will go here.</p>
-                                    </CardContent>
-                                </Card>
-                            ))}
-                        </div>
-                    ) : (
-                        <p className="p-4 text-center text-muted-foreground">No years found. The structure might not have been created correctly.</p>
-                    )}
+                    </div>
                 </div>
+
                 <DialogFooter>
                     <DialogClose asChild>
                         <Button type="button" variant="outline">Close</Button>
