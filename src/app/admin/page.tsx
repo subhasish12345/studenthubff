@@ -308,6 +308,7 @@ function ManageSectionsDialog({
         if (!open) return;
 
         async function fetchSemesters() {
+            if (!degree || !stream || !batch) return;
             setIsLoadingSemesters(true);
             try {
                 const semesterData = await getSemestersForBatch(degree.id, stream.id, batch.id);
@@ -324,7 +325,7 @@ function ManageSectionsDialog({
             finally { setIsLoadingSemesters(false); }
         };
         fetchSemesters();
-    }, [open, degree.id, stream.id, batch.id, toast]);
+    }, [open, degree, stream, batch, toast]);
     
     useEffect(() => {
         if (selectedSemester) {
@@ -373,7 +374,7 @@ function ManageSectionsDialog({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-xl">
+            <DialogContent className="sm:max-w-xl overflow-visible">
                 <DialogHeader>
                     <DialogTitle>Manage Sections for {batch.name}</DialogTitle>
                     <CardDescription>Add and view sections for each semester of this batch.</CardDescription>
