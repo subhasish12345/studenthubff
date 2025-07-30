@@ -70,6 +70,9 @@ function AddEditTeacherDialog({ mode, teacher, onTeacherUpdated }: { mode: 'add'
     const [name, setName] = useState(teacher?.name || '');
     const [email, setEmail] = useState(teacher?.email || '');
     const [employeeId, setEmployeeId] = useState(teacher?.employeeId || '');
+    const [phone, setPhone] = useState(teacher?.phone || '');
+    const [gender, setGender] = useState(teacher?.gender || '');
+    const [status, setStatus] = useState(teacher?.status || 'Active');
     const [isLoading, setIsLoading] = useState(false);
     const [open, setOpen] = useState(false);
     const { toast } = useToast();
@@ -80,16 +83,17 @@ function AddEditTeacherDialog({ mode, teacher, onTeacherUpdated }: { mode: 'add'
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!name || !email || !employeeId) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Please fill out all fields.' });
+            toast({ variant: 'destructive', title: 'Error', description: 'Please fill out all required fields.' });
             return;
         }
         setIsLoading(true);
+        const teacherData = { name, email, employeeId, phone, gender, status, role: 'teacher' as const };
         try {
             if (mode === 'add') {
-                await addTeacher({ name, email, employeeId });
+                await addTeacher(teacherData);
                 toast({ title: 'Success', description: 'Teacher added to the pool.' });
             } else if (teacher) {
-                await updateTeacher(teacher.id, { name, email, employeeId });
+                await updateTeacher(teacher.id, teacherData);
                 toast({ title: 'Success', description: 'Teacher details updated.' });
             }
             onTeacherUpdated();
@@ -107,6 +111,9 @@ function AddEditTeacherDialog({ mode, teacher, onTeacherUpdated }: { mode: 'add'
             setName(teacher?.name || '');
             setEmail(teacher?.email || '');
             setEmployeeId(teacher?.employeeId || '');
+            setPhone(teacher?.phone || '');
+            setGender(teacher?.gender || '');
+            setStatus(teacher?.status || 'Active');
         }
     }, [open, teacher]);
 
@@ -124,23 +131,57 @@ function AddEditTeacherDialog({ mode, teacher, onTeacherUpdated }: { mode: 'add'
                     </DropdownMenuItem>
                 )}
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="sm:max-w-[600px]">
                 <form onSubmit={handleSubmit}>
                     <DialogHeader>
                         <DialogTitle>{title}</DialogTitle>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="name" className="text-right">Name</Label>
-                            <Input id="name" value={name} onChange={e => setName(e.target.value)} className="col-span-3" />
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="name">Full Name</Label>
+                                <Input id="name" value={name} onChange={e => setName(e.target.value)} />
+                            </div>
+                             <div className="space-y-2">
+                                <Label htmlFor="employeeId">Employee ID</Label>
+                                <Input id="employeeId" value={employeeId} onChange={e => setEmployeeId(e.target.value)} />
+                            </div>
                         </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="email" className="text-right">Email</Label>
-                            <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} className="col-span-3" />
+                        <div className="space-y-2">
+                            <Label htmlFor="email">Email</Label>
+                            <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} />
                         </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="employeeId" className="text-right">Employee ID</Label>
-                            <Input id="employeeId" value={employeeId} onChange={e => setEmployeeId(e.target.value)} className="col-span-3" />
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="phone">Phone Number (Optional)</Label>
+                                <Input id="phone" value={phone} onChange={e => setPhone(e.target.value)} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="gender">Gender (Optional)</Label>
+                                 <Select onValueChange={setGender} value={gender}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select gender" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Male">Male</SelectItem>
+                                        <SelectItem value="Female">Female</SelectItem>
+                                        <SelectItem value="Other">Other</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                         <div className="space-y-2">
+                            <Label htmlFor="status">Status</Label>
+                             <Select onValueChange={setStatus} value={status}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Active">Active</SelectItem>
+                                    <SelectItem value="Resigned">Resigned</SelectItem>
+                                    <SelectItem value="Suspended">Suspended</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                     </div>
                     <DialogFooter>
@@ -572,7 +613,6 @@ function ManageBatchesDialog({
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                             <DropdownMenuItem>Edit Batch</DropdownMenuItem>
-                                                            <DropdownMenuItem>Manage Sections</DropdownMenuItem>
                                                             <DropdownMenuItem>Promote Batch</DropdownMenuItem>
                                                             <DropdownMenuSeparator />
                                                             <DeleteBatchDialog degreeId={degree.id} streamId={stream.id} batchId={batch.id} onBatchDeleted={fetchBatches} />
@@ -775,6 +815,15 @@ export default function AdminPage() {
         setIsBatchesDialogOpen(true);
     };
     
+    const getStatusVariant = (status: Teacher['status']) => {
+        switch (status) {
+            case 'Active': return 'default';
+            case 'Resigned': return 'secondary';
+            case 'Suspended': return 'destructive';
+            default: return 'outline';
+        }
+    }
+
     return (
         <div className="flex flex-col gap-8">
             <div>
@@ -868,15 +917,16 @@ export default function AdminPage() {
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Name</TableHead>
-                                        <TableHead>Email</TableHead>
                                         <TableHead>Employee ID</TableHead>
+                                        <TableHead>Email</TableHead>
+                                        <TableHead>Status</TableHead>
                                         <TableHead><span className="sr-only">Actions</span></TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {isLoadingTeachers ? (
                                          <TableRow>
-                                            <TableCell colSpan={4} className="text-center">
+                                            <TableCell colSpan={5} className="text-center">
                                                 <div className="flex justify-center items-center">
                                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                                     Loading teachers...
@@ -887,8 +937,11 @@ export default function AdminPage() {
                                         teachers.map((teacher) => (
                                             <TableRow key={teacher.id}>
                                                 <TableCell className="font-medium">{teacher.name}</TableCell>
-                                                <TableCell>{teacher.email}</TableCell>
                                                 <TableCell>{teacher.employeeId}</TableCell>
+                                                <TableCell>{teacher.email}</TableCell>
+                                                <TableCell>
+                                                    <Badge variant={getStatusVariant(teacher.status)}>{teacher.status}</Badge>
+                                                </TableCell>
                                                 <TableCell className='text-right'>
                                                     <DropdownMenu>
                                                         <DropdownMenuTrigger asChild>
@@ -907,7 +960,7 @@ export default function AdminPage() {
                                         ))
                                     ) : (
                                          <TableRow>
-                                            <TableCell colSpan={4} className="text-center">No teachers found. Add one to get started.</TableCell>
+                                            <TableCell colSpan={5} className="text-center">No teachers found. Add one to get started.</TableCell>
                                         </TableRow>
                                     )}
                                 </TableBody>

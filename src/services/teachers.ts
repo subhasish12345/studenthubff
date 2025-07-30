@@ -9,6 +9,10 @@ export interface Teacher {
   name: string;
   email: string;
   employeeId: string;
+  phone: string;
+  gender: string;
+  status: 'Active' | 'Resigned' | 'Suspended';
+  role: 'teacher';
 }
 
 // Function to add a new teacher to the central pool
