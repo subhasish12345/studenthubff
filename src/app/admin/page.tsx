@@ -284,7 +284,7 @@ function ManageSectionsDialog({ degree, stream, batch }: { degree: Degree; strea
     const [open, setOpen] = useState(false);
     
     const [semesters, setSemesters] = useState<Semester[]>([]);
-    const [isLoadingSemesters, setIsLoadingSemesters] = useState(false);
+    const [isLoadingSemesters, setIsLoadingSemesters] = useState(true);
     const [selectedSemester, setSelectedSemester] = useState<string | null>(null);
 
     const [sections, setSections] = useState<Section[]>([]);
