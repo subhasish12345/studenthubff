@@ -8,24 +8,24 @@ body {
 
 @layer base {
   :root {
-    --background: 285 44% 93%;
-    --foreground: 262 52% 20%;
-    --card: 285 44% 98%;
-    --card-foreground: 262 52% 20%;
-    --popover: 285 44% 98%;
-    --popover-foreground: 262 52% 20%;
+    --background: 240 10% 98%;
+    --foreground: 262 52% 15%;
+    --card: 0 0% 100%;
+    --card-foreground: 262 52% 15%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 262 52% 15%;
     --primary: 262 52% 50%;
     --primary-foreground: 285 44% 98%;
-    --secondary: 285 44% 88%;
-    --secondary-foreground: 262 52% 20%;
-    --muted: 285 44% 88%;
+    --secondary: 240 5% 90%;
+    --secondary-foreground: 262 52% 15%;
+    --muted: 240 5% 90%;
     --muted-foreground: 262 52% 40%;
     --accent: 231 48% 54%;
     --accent-foreground: 285 44% 98%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 285 44% 85%;
-    --input: 285 44% 88%;
+    --border: 240 5% 85%;
+    --input: 240 5% 90%;
     --ring: 231 48% 54%;
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
@@ -82,5 +82,6 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cg fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.05'%3E%3Cpath d='M0 38.59l2.83-2.83 1.41 1.41L1.41 40H0v-1.41zM0 1.4l2.83 2.83 1.41-1.41L1.41 0H0v1.41zM38.59 40l-2.83-2.83 1.41-1.41L40 38.59V40h-1.41zM40 1.41l-2.83 2.83-1.41-1.41L38.59 0H40v1.41zM20 18.6l2.83-2.83 1.41 1.41L21.41 20l2.83 2.83-1.41 1.41L20 21.41l-2.83 2.83-1.41-1.41L18.59 20l-2.83-2.83 1.41-1.41L20 18.59z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
   }
 }
