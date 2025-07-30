@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Avatar,
@@ -38,13 +39,136 @@ import {
   Bell,
   Folder,
   Timer,
-  Users
+  Users,
+  GraduationCap,
+  Book,
+  FileUp,
+  GitPullRequest
 } from "lucide-react";
+import { getTeachers } from "@/services/teachers";
+import { getDegrees } from "@/services/degrees";
+
+const AdminDashboard = () => {
+    const [totalTeachers, setTotalTeachers] = useState(0);
+    const [totalDegrees, setTotalDegrees] = useState(0);
+
+    useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                const teachers = await getTeachers();
+                setTotalTeachers(teachers.length);
+
+                const degrees = await getDegrees();
+                setTotalDegrees(degrees.length);
+            } catch (error) {
+                console.error("Failed to fetch admin stats:", error);
+            }
+        };
+        fetchStats();
+    }, []);
+
+
+    return (
+        <div className="flex flex-col gap-8">
+            <div>
+                <h1 className="text-4xl font-bold font-headline">Welcome, Admin!</h1>
+                <p className="text-muted-foreground">Here's a high-level overview of the system.</p>
+            </div>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Total Students</CardTitle>
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">0</div>
+                        <p className="text-xs text-muted-foreground">Across all batches</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Total Teachers</CardTitle>
+                        <GraduationCap className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{totalTeachers}</div>
+                         <p className="text-xs text-muted-foreground">In the faculty pool</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Degrees Created</CardTitle>
+                        <Book className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{totalDegrees}</div>
+                        <p className="text-xs text-muted-foreground">e.g., B.Tech, MCA</p>
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Active Batches</CardTitle>
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">0</div>
+                        <p className="text-xs text-muted-foreground">Currently ongoing</p>
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Total Subjects</CardTitle>
+                        <ClipboardList className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">0</div>
+                        <p className="text-xs text-muted-foreground">Across all semesters</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Assignments Uploaded</CardTitle>
+                        <FileUp className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">0</div>
+                         <p className="text-xs text-muted-foreground">System-wide total</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Notes Uploaded</CardTitle>
+                        <Folder className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">0</div>
+                         <p className="text-xs text-muted-foreground">Shared resources</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Pending Promotions</CardTitle>
+                        <GitPullRequest className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">0</div>
+                        <p className="text-xs text-muted-foreground">Awaiting action</p>
+                    </CardContent>
+                </Card>
+            </div>
+        </div>
+    );
+};
 
 export default function DashboardPage() {
   const { user, role } = useAuth();
-  const name = user?.displayName?.split(' ')[0] || user?.email?.split('@')[0] || 'User';
+  
+  if (role === 'admin') {
+      return <AdminDashboard />;
+  }
 
+  // Student/Teacher Dashboard
+  const name = user?.displayName?.split(' ')[0] || user?.email?.split('@')[0] || 'User';
   const [academicYear, setAcademicYear] = useState("");
 
   return (
