@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { PlusCircle, MoreHorizontal, Loader2, Edit } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, Loader2, Edit, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -152,7 +152,7 @@ function EditDegreeDialog({ degree, onDegreeUpdated }: { degree: Degree, onDegre
                     <div className="grid gap-4 py-4">
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="name" className="text-right">Name</Label>
-                            <Input id="name" value={name} onChange={(e) => setName(e.target.value)} className="col-span-3" />
+                            <Input id="name" value={name} onChange={(e) => setName(e.target.value)} className="col-span-3" readOnly />
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="duration" className="text-right">Duration</Label>
@@ -266,7 +266,10 @@ function ManageStreamsDialog({ degree, onStreamAdded }: { degree: Degree, onStre
                                <TableBody>
                                     {streams.map(stream => (
                                         <TableRow key={stream.id}>
-                                            <TableCell>{stream.name}</TableCell>
+                                            <TableCell className="font-medium">{stream.name}</TableCell>
+                                            <TableCell className="text-right">
+                                                <Button variant="outline" size="sm">Manage Batches</Button>
+                                            </TableCell>
                                         </TableRow>
                                     ))}
                                </TableBody>
@@ -370,6 +373,9 @@ export default function AdminPage() {
                                                         <DropdownMenuContent align="end">
                                                             <EditDegreeDialog degree={degree} onDegreeUpdated={fetchDegrees} />
                                                             <ManageStreamsDialog degree={degree} onStreamAdded={fetchDegrees} />
+                                                            <DropdownMenuItem className="text-destructive focus:text-destructive">
+                                                              <Trash2 className="mr-2 h-4 w-4" /> Delete Degree
+                                                            </DropdownMenuItem>
                                                         </DropdownMenuContent>
                                                     </DropdownMenu>
                                                 </TableCell>
@@ -461,3 +467,5 @@ export default function AdminPage() {
         </div>
     );
 }
+
+    
