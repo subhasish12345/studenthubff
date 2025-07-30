@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { PlusCircle, MoreHorizontal, Loader2, Edit, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,7 +18,7 @@ import { addStream, getStreams, Stream } from '@/services/streams';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { createDegreeStructure } from '@/services/setup-collections';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Batch, addBatch, getBatchesForStream } from '@/services/batches';
+import { Batch, addBatch, getBatchesForStream, deleteBatch } from '@/services/batches';
 
 
 const teachersData = [
@@ -231,6 +231,51 @@ function DeleteDegreeDialog({ degreeId, onDegreeDeleted }: { degreeId: string; o
     );
 }
 
+function DeleteBatchDialog({ degreeId, streamId, batchId, onBatchDeleted }: { degreeId: string, streamId: string, batchId: string, onBatchDeleted: () => void }) {
+    const [isLoading, setIsLoading] = useState(false);
+    const { toast } = useToast();
+
+    const handleDelete = async () => {
+        setIsLoading(true);
+        try {
+            await deleteBatch(degreeId, streamId, batchId);
+            toast({ title: "Success", description: "Batch deleted successfully." });
+            onBatchDeleted();
+        } catch (error) {
+            console.error("Error deleting batch: ", error);
+            const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+            toast({ variant: "destructive", title: "Error", description: `Failed to delete batch: ${errorMessage}` });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    
+    return (
+        <AlertDialog>
+            <AlertDialogTrigger asChild>
+                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
+                    <Trash2 className="mr-2 h-4 w-4" /> Delete Batch
+                </DropdownMenuItem>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This will permanently delete the batch and all its data (students, teachers, etc.). This action cannot be undone.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete} disabled={isLoading} className="bg-destructive hover:bg-destructive/90">
+                        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Delete
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    );
+}
+
 function ManageBatchesDialog({ degree, stream }: { degree: Degree; stream: Stream }) {
     const [batches, setBatches] = useState<Batch[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -280,7 +325,7 @@ function ManageBatchesDialog({ degree, stream }: { degree: Degree; stream: Strea
                 promotedYears: 0,
                 startMonth: 8, // August
             };
-            await addBatch(degree.id, stream.id, newBatch);
+            await addBatch(degree.id, stream.id, degree.duration, newBatch);
             toast({ title: 'Success', description: 'New batch created.' });
             setBatchName('');
             setStartYear(new Date().getFullYear());
@@ -375,7 +420,22 @@ function ManageBatchesDialog({ degree, stream }: { degree: Degree; stream: Strea
                                                 <TableCell className="font-medium">{batch.name}</TableCell>
                                                 <TableCell><Badge variant="secondary">{calculateCurrentYear(batch)}</Badge></TableCell>
                                                 <TableCell className="text-right">
-                                                    <Button variant="ghost" size="sm">Promote</Button>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" className="h-8 w-8 p-0">
+                                                                <span className="sr-only">Open menu</span>
+                                                                <MoreHorizontal className="h-4 w-4" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                            <DropdownMenuItem>Manage Sections</DropdownMenuItem>
+                                                            <DropdownMenuItem>Edit Batch</DropdownMenuItem>
+                                                            <DropdownMenuItem>Promote Batch</DropdownMenuItem>
+                                                            <DropdownMenuSeparator />
+                                                            <DeleteBatchDialog degreeId={degree.id} streamId={stream.id} batchId={batch.id} onBatchDeleted={fetchBatches} />
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
                                                 </TableCell>
                                             </TableRow>
                                         ))}
@@ -680,3 +740,5 @@ export default function AdminPage() {
         </div>
     );
 }
+
+    

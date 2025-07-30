@@ -44,6 +44,7 @@ export const createDegreeStructure = async (degreeName: string, duration: number
         batch.set(streamRef, { name: streamName });
 
         // 4. Create an empty 'batches' collection with a placeholder
+        // Batches are now created dynamically via the UI
         const batchesRef = doc(streamRef, 'batches', '_placeholder');
         batch.set(batchesRef, { initialized: true });
     }
@@ -51,3 +52,5 @@ export const createDegreeStructure = async (degreeName: string, duration: number
     // Commit the batch write to execute all operations
     await batch.commit();
 };
+
+    
