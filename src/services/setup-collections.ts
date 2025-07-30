@@ -32,7 +32,7 @@ export const createDegreeStructure = async (degreeName: string, duration: number
     batch.set(collegeRef, { name: "Gandhi Engineering College" }, { merge: true });
 
     // 2. Create the Degree document
-    const degreeId = degreeName.toLowerCase().replace(/\./g, '');
+    const degreeId = degreeName.toLowerCase().replace(/\./g, '').replace(/ /g, '-');
     const degreeRef = doc(collegeRef, 'degrees', degreeId);
     const streams = degreeStreamMap[degreeName] || ['General'];
     batch.set(degreeRef, { name: degreeName, duration, streamCount: streams.length });
@@ -57,17 +57,12 @@ export const createDegreeStructure = async (degreeName: string, duration: number
             batch.set(batchRef, { name: batchName });
 
             // 6. Create placeholder documents to ensure subcollections are created
-            // Firestore doesn't "create" empty collections, so we add a placeholder document.
-            const studentsRef = doc(batchRef, 'students', '_placeholder');
-            batch.set(studentsRef, { initialized: true });
-            const teachersRef = doc(batchRef, 'teachers', '_placeholder');
-            batch.set(teachersRef, { initialized: true });
-            const subjectsRef = doc(batchRef, 'subjects', '_placeholder');
-            batch.set(subjectsRef, { initialized: true });
-            const assignmentsRef = doc(batchRef, 'assignments', '_placeholder');
-            batch.set(assignmentsRef, { initialized: true });
-            const notesRef = doc(batchRef, 'notes', '_placeholder');
-            batch.set(notesRef, { initialized: true });
+            const placeholder = { initialized: true };
+            batch.set(doc(batchRef, 'students', '_placeholder'), placeholder);
+            batch.set(doc(batchRef, 'teachers', '_placeholder'), placeholder);
+            batch.set(doc(batchRef, 'subjects', '_placeholder'), placeholder);
+            batch.set(doc(batchRef, 'assignments', '_placeholder'), placeholder);
+            batch.set(doc(batchRef, 'notes', '_placeholder'), placeholder);
         }
     }
     

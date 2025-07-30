@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { getDegrees, Degree } from '@/services/degrees';
+import { getDegrees, Degree, updateDegree } from '@/services/degrees';
 import { addStream, getStreams, Stream } from '@/services/streams';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { createDegreeStructure } from '@/services/setup-collections';
@@ -106,6 +106,75 @@ function AddDegreeDialog({ onDegreeAdded }: { onDegreeAdded: () => void }) {
                         <Button type="submit" disabled={isLoading}>
                             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             Save Degree
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+function EditDegreeDialog({ degree, onDegreeUpdated }: { degree: Degree, onDegreeUpdated: () => void }) {
+    const [name, setName] = useState(degree.name);
+    const [duration, setDuration] = useState(degree.duration);
+    const [isLoading, setIsLoading] = useState(false);
+    const { toast } = useToast();
+    const [open, setOpen] = useState(false);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsLoading(true);
+        try {
+            await updateDegree(degree.id, { name, duration });
+            toast({ title: 'Success', description: 'Degree updated successfully.' });
+            onDegreeUpdated();
+            setOpen(false);
+        } catch (error) {
+            console.error(error);
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to update degree.' });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                    <Edit className="mr-2 h-4 w-4" /> Edit Degree
+                </DropdownMenuItem>
+            </DialogTrigger>
+            <DialogContent>
+                <form onSubmit={handleSubmit}>
+                    <DialogHeader>
+                        <DialogTitle>Edit Degree</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="name" className="text-right">Name</Label>
+                            <Input id="name" value={name} onChange={(e) => setName(e.target.value)} className="col-span-3" />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="duration" className="text-right">Duration</Label>
+                             <Select onValueChange={(val) => setDuration(parseInt(val,10))} value={duration ? duration.toString() : ''}>
+                                <SelectTrigger className="col-span-3">
+                                    <SelectValue placeholder="Select duration (years)" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="2">2 Years</SelectItem>
+                                    <SelectItem value="3">3 Years</SelectItem>
+                                    <SelectItem value="4">4 Years</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                         <DialogClose asChild>
+                            <Button type="button" variant="outline">Cancel</Button>
+                         </DialogClose>
+                        <Button type="submit" disabled={isLoading}>
+                            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Update Degree
                         </Button>
                     </DialogFooter>
                 </form>
@@ -299,7 +368,7 @@ export default function AdminPage() {
                                                             </Button>
                                                         </DropdownMenuTrigger>
                                                         <DropdownMenuContent align="end">
-                                                            <DropdownMenuItem><Edit className="mr-2 h-4 w-4" /> Edit Degree</DropdownMenuItem>
+                                                            <EditDegreeDialog degree={degree} onDegreeUpdated={fetchDegrees} />
                                                             <ManageStreamsDialog degree={degree} onStreamAdded={fetchDegrees} />
                                                         </DropdownMenuContent>
                                                     </DropdownMenu>

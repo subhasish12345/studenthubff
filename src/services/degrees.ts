@@ -66,4 +66,12 @@ export const updateStreamCount = async (degreeId: string, count: number) => {
     }
 }
 
-    
+export const updateDegree = async (degreeId: string, data: Partial<Omit<Degree, 'id' | 'streamCount'>>) => {
+    try {
+        const degreeRef = doc(db, 'colleges', COLLEGE_ID, 'degrees', degreeId);
+        await updateDoc(degreeRef, data);
+    } catch (e) {
+        console.error("Error updating degree: ", e);
+        throw new Error('Failed to update degree');
+    }
+};
