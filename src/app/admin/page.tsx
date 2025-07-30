@@ -19,13 +19,144 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { createDegreeStructure } from '@/services/setup-collections';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Batch, addBatch, getBatchesForStream, deleteBatch } from '@/services/batches';
+import { Teacher, addTeacher, getTeachers, updateTeacher, deleteTeacher } from '@/services/teachers';
 
 
-const teachersData = [
-    { name: 'Dr. Alan Smith', email: 'alan.s@example.com', degree: 'B.Tech', stream: 'CSE', year: '1st' },
-    { name: 'Prof. Mary Jane', email: 'mary.j@example.com', degree: 'MBA', stream: 'Finance', year: '2nd' },
-    { name: 'Mr. Ankit Sharma', email: 'ankit.s@example.com', degree: 'B.Tech', stream: 'AIML', year: '1st' },
-];
+function DeleteTeacherDialog({ teacher, onTeacherDeleted }: { teacher: Teacher, onTeacherDeleted: () => void }) {
+    const [isLoading, setIsLoading] = useState(false);
+    const { toast } = useToast();
+
+    const handleDelete = async () => {
+        setIsLoading(true);
+        try {
+            await deleteTeacher(teacher.id);
+            toast({ title: "Success", description: "Teacher removed successfully." });
+            onTeacherDeleted();
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+            toast({ variant: "destructive", title: "Error", description: `Failed to remove teacher: ${errorMessage}` });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <AlertDialog>
+            <AlertDialogTrigger asChild>
+                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
+                    <Trash2 className="mr-2 h-4 w-4" /> Delete Teacher
+                </DropdownMenuItem>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This will permanently remove {teacher.name} from the teacher pool. This action cannot be undone.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete} disabled={isLoading} className="bg-destructive hover:bg-destructive/90">
+                        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Yes, delete
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    );
+}
+
+function AddEditTeacherDialog({ mode, teacher, onTeacherUpdated }: { mode: 'add' | 'edit', teacher?: Teacher, onTeacherUpdated: () => void }) {
+    const [name, setName] = useState(teacher?.name || '');
+    const [email, setEmail] = useState(teacher?.email || '');
+    const [employeeId, setEmployeeId] = useState(teacher?.employeeId || '');
+    const [isLoading, setIsLoading] = useState(false);
+    const [open, setOpen] = useState(false);
+    const { toast } = useToast();
+    
+    const title = mode === 'add' ? 'Add New Teacher' : `Edit ${teacher?.name}`;
+    const buttonText = mode === 'add' ? 'Add Teacher' : 'Save Changes';
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!name || !email || !employeeId) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Please fill out all fields.' });
+            return;
+        }
+        setIsLoading(true);
+        try {
+            if (mode === 'add') {
+                await addTeacher({ name, email, employeeId });
+                toast({ title: 'Success', description: 'Teacher added to the pool.' });
+            } else if (teacher) {
+                await updateTeacher(teacher.id, { name, email, employeeId });
+                toast({ title: 'Success', description: 'Teacher details updated.' });
+            }
+            onTeacherUpdated();
+            setOpen(false);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : `An unknown error occurred.`;
+            toast({ variant: 'destructive', title: 'Error', description: errorMessage });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    
+    useEffect(() => {
+        if(open) {
+            setName(teacher?.name || '');
+            setEmail(teacher?.email || '');
+            setEmployeeId(teacher?.employeeId || '');
+        }
+    }, [open, teacher]);
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                {mode === 'add' ? (
+                    <Button>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Add Teacher
+                    </Button>
+                ) : (
+                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                        <Edit className="mr-2 h-4 w-4" /> Edit Details
+                    </DropdownMenuItem>
+                )}
+            </DialogTrigger>
+            <DialogContent>
+                <form onSubmit={handleSubmit}>
+                    <DialogHeader>
+                        <DialogTitle>{title}</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="name" className="text-right">Name</Label>
+                            <Input id="name" value={name} onChange={e => setName(e.target.value)} className="col-span-3" />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="email" className="text-right">Email</Label>
+                            <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} className="col-span-3" />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="employeeId" className="text-right">Employee ID</Label>
+                            <Input id="employeeId" value={employeeId} onChange={e => setEmployeeId(e.target.value)} className="col-span-3" />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button type="button" variant="outline">Cancel</Button>
+                        </DialogClose>
+                        <Button type="submit" disabled={isLoading}>
+                            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            {buttonText}
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    );
+}
 
 function AddDegreeDialog({ onDegreeAdded }: { onDegreeAdded: () => void }) {
     const [name, setName] = useState('');
@@ -441,6 +572,7 @@ function ManageBatchesDialog({
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                             <DropdownMenuItem>Edit Batch</DropdownMenuItem>
+                                                            <DropdownMenuItem>Manage Sections</DropdownMenuItem>
                                                             <DropdownMenuItem>Promote Batch</DropdownMenuItem>
                                                             <DropdownMenuSeparator />
                                                             <DeleteBatchDialog degreeId={degree.id} streamId={stream.id} batchId={batch.id} onBatchDeleted={fetchBatches} />
@@ -590,6 +722,8 @@ function ManageStreamsDialog({
 export default function AdminPage() {
     const [degrees, setDegrees] = useState<Degree[]>([]);
     const [isLoadingDegrees, setIsLoadingDegrees] = useState(true);
+    const [teachers, setTeachers] = useState<Teacher[]>([]);
+    const [isLoadingTeachers, setIsLoadingTeachers] = useState(true);
     const { toast } = useToast();
 
     // State for managing dialogs
@@ -611,9 +745,22 @@ export default function AdminPage() {
             setIsLoadingDegrees(false);
         }
     };
+    
+    const fetchTeachers = async () => {
+        setIsLoadingTeachers(true);
+        try {
+            const teachersData = await getTeachers();
+            setTeachers(teachersData);
+        } catch (error) {
+             toast({ variant: 'destructive', title: 'Error', description: 'Failed to fetch teachers.' });
+        } finally {
+            setIsLoadingTeachers(false);
+        }
+    }
 
     useEffect(() => {
         fetchDegrees();
+        fetchTeachers();
     }, []);
 
     const handleManageStreams = (degree: Degree) => {
@@ -712,45 +859,57 @@ export default function AdminPage() {
                         <CardHeader className="flex flex-row items-center justify-between">
                             <div>
                                 <CardTitle>Manage Teachers</CardTitle>
-                                <CardDescription>Onboard new teachers and assign them to specific batches.</CardDescription>
+                                <CardDescription>Add or edit teachers in the central pool.</CardDescription>
                             </div>
-                            <Button>
-                                <PlusCircle className="mr-2 h-4 w-4" />
-                                Add Teacher
-                            </Button>
+                            <AddEditTeacherDialog mode="add" onTeacherUpdated={fetchTeachers} />
                         </CardHeader>
                         <CardContent>
                             <Table>
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Name</TableHead>
-                                        <TableHead>Assigned Batch</TableHead>
                                         <TableHead>Email</TableHead>
+                                        <TableHead>Employee ID</TableHead>
                                         <TableHead><span className="sr-only">Actions</span></TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {teachersData.map((teacher) => (
-                                        <TableRow key={teacher.email}>
-                                            <TableCell className="font-medium">{teacher.name}</TableCell>
-                                            <TableCell><Badge variant="outline">{teacher.degree} {teacher.year} Yr - {teacher.stream}</Badge></TableCell>
-                                            <TableCell>{teacher.email}</TableCell>
-                                            <TableCell>
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" className="h-8 w-8 p-0">
-                                                            <span className="sr-only">Open menu</span>
-                                                            <MoreHorizontal className="h-4 w-4" />
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
-                                                        <DropdownMenuItem>Edit Assignment</DropdownMenuItem>
-                                                        <DropdownMenuItem className="text-destructive">Remove</DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
+                                    {isLoadingTeachers ? (
+                                         <TableRow>
+                                            <TableCell colSpan={4} className="text-center">
+                                                <div className="flex justify-center items-center">
+                                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                    Loading teachers...
+                                                </div>
                                             </TableCell>
                                         </TableRow>
-                                    ))}
+                                    ) : teachers.length > 0 ? (
+                                        teachers.map((teacher) => (
+                                            <TableRow key={teacher.id}>
+                                                <TableCell className="font-medium">{teacher.name}</TableCell>
+                                                <TableCell>{teacher.email}</TableCell>
+                                                <TableCell>{teacher.employeeId}</TableCell>
+                                                <TableCell className='text-right'>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" className="h-8 w-8 p-0">
+                                                                <span className="sr-only">Open menu</span>
+                                                                <MoreHorizontal className="h-4 w-4" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <AddEditTeacherDialog mode="edit" teacher={teacher} onTeacherUpdated={fetchTeachers} />
+                                                            <DeleteTeacherDialog teacher={teacher} onTeacherDeleted={fetchTeachers} />
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                    ) : (
+                                         <TableRow>
+                                            <TableCell colSpan={4} className="text-center">No teachers found. Add one to get started.</TableCell>
+                                        </TableRow>
+                                    )}
                                 </TableBody>
                             </Table>
                         </CardContent>
@@ -798,3 +957,4 @@ export default function AdminPage() {
         </div>
     );
 }
+
