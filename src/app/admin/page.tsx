@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { PlusCircle, MoreHorizontal, Loader2, Edit, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose, DialogPortal } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
@@ -297,10 +297,8 @@ function ManageSectionsDialog({ degree, stream, batch }: { degree: Degree; strea
     useEffect(() => {
         if (!open) return;
 
-        const fetchSemesters = async () => {
+        async function fetchSemesters() {
             setIsLoadingSemesters(true);
-            setSemesters([]);
-            setSelectedSemester(null);
             try {
                 const semesterData = await getSemestersForBatch(degree.id, stream.id, batch.id);
                 setSemesters(semesterData);
@@ -318,8 +316,9 @@ function ManageSectionsDialog({ degree, stream, batch }: { degree: Degree; strea
     
     useEffect(() => {
         if (selectedSemester) {
-            const fetchSections = async () => {
+            async function fetchSections() {
                 setIsLoadingSections(true);
+                setSections([]);
                 try {
                     const sectionsData = await getSections(degree.id, stream.id, batch.id, selectedSemester);
                     setSections(sectionsData);
@@ -379,7 +378,12 @@ function ManageSectionsDialog({ degree, stream, batch }: { degree: Degree; strea
                         ) : (
                             <Select onValueChange={setSelectedSemester} value={selectedSemester || ''}>
                                 <SelectTrigger id="semester-select" className="mt-1"><SelectValue placeholder="Select Semester" /></SelectTrigger>
-                                <SelectContent>{semesters.map(sem => <SelectItem key={sem.id} value={sem.id}>{sem.name}</SelectItem>)}</SelectContent>
+                                <DialogPortal>
+                                    <SelectContent>
+                                        {semesters.map(sem => 
+                                        <SelectItem key={sem.id} value={sem.id}>{sem.name}</SelectItem>)}
+                                    </SelectContent>
+                                </DialogPortal>
                             </Select>
                         )}
                     </div>
@@ -896,3 +900,6 @@ export default function AdminPage() {
         </div>
     );
 }
+
+
+    
