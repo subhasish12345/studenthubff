@@ -1,13 +1,16 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow read/write access to all documents for any authenticated user.
-    // This is suitable for development but should be refined for production
-    // with more granular, role-based access controls.
+    // Admins have full read/write access to everything.
     match /{document=**} {
-      allow read, write: if request.auth != null;
+      allow read, write: if request.auth != null && request.auth.token.email == 'subhasishnayak38@gmail.com';
     }
+
+    // TODO: Add rules for students and teachers later.
+    // For example, an authenticated user can read their own data.
+    // match /users/{userId} {
+    //   allow read, update: if request.auth != null && request.auth.uid == userId;
+    // }
   }
 }
