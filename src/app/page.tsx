@@ -43,14 +43,17 @@ import {
   GraduationCap,
   Book,
   FileUp,
-  GitPullRequest
+  GitPullRequest,
+  Briefcase
 } from "lucide-react";
 import { getTeachers } from "@/services/teachers";
 import { getDegrees } from "@/services/degrees";
+import { getEmployees } from "@/services/employees";
 
 const AdminDashboard = () => {
     const [totalTeachers, setTotalTeachers] = useState(0);
     const [totalDegrees, setTotalDegrees] = useState(0);
+    const [totalEmployees, setTotalEmployees] = useState(0);
 
     useEffect(() => {
         const fetchStats = async () => {
@@ -60,6 +63,10 @@ const AdminDashboard = () => {
 
                 const degrees = await getDegrees();
                 setTotalDegrees(degrees.length);
+                
+                const employees = await getEmployees();
+                setTotalEmployees(employees.length);
+
             } catch (error) {
                 console.error("Failed to fetch admin stats:", error);
             }
@@ -83,6 +90,16 @@ const AdminDashboard = () => {
                     <CardContent>
                         <div className="text-2xl font-bold">0</div>
                         <p className="text-xs text-muted-foreground">Across all batches</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Active Employees</CardTitle>
+                        <Briefcase className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{totalEmployees}</div>
+                        <p className="text-xs text-muted-foreground">Total staff members</p>
                     </CardContent>
                 </Card>
                 <Card>
