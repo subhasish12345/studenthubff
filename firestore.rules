@@ -1,16 +1,24 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Admins have full read/write access to everything.
-    match /{document=**} {
-      allow read, write: if request.auth != null && request.auth.token.email == 'subhasishnayak38@gmail.com';
+    
+    // Helper function to check for admin role
+    function isAdmin() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // TODO: Add rules for students and teachers later.
-    // For example, an authenticated user can read their own data.
-    // match /users/{userId} {
-    //   allow read, update: if request.auth != null && request.auth.uid == userId;
-    // }
+    // Rules for the 'users' collection (for storing roles)
+    match /users/{userId} {
+      // Admins can read, create, and update any user's role
+      allow read, create, update: if isAdmin();
+      // Any authenticated user can read their own role document
+      allow get: if request.auth.uid == userId;
+    }
+
+    // Rules for all collections under a college
+    match /colleges/{collegeId}/{document=**} {
+        // Admins have full access to all college data
+        allow read, write: if isAdmin();
+    }
   }
 }
