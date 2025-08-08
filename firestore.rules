@@ -1,27 +1,30 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
     
     function isAdmin() {
-      // Check if the user is an admin by looking up their role in the /users collection.
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // Rules for the 'users' collection where roles are stored
     match /users/{userId} {
-      allow read: if request.auth != null;
-      // Allow a user to create/update their OWN document, or allow an admin to do anything.
+      allow read: if request.auth.uid == userId || isAdmin();
       allow write: if request.auth.uid == userId || isAdmin();
     }
-    
-    // Rules for the main college data structure
-    match /colleges/GEC/{document=**} {
-      // Admins can write to anywhere in the college structure
-      allow write: if isAdmin();
-      // Any authenticated user (student, teacher, admin) can read data
-      allow read: if request.auth != null;
+
+    // Grant access to the college data
+    match /colleges/{collegeId}/{document=**} {
+        // Admins can read and write anything in the college data
+        allow read, write: if isAdmin();
+
+        // Any authenticated user can read from specific public collections
+        allow read: if request.auth != null && (
+          document == 'events' ||
+          document == 'notices' ||
+          document == 'degrees' ||
+          document == 'streams'
+        );
     }
   }
 }
