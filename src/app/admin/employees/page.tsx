@@ -45,6 +45,8 @@ function AddMetaDialog({ type, onAdded, departments }: { type: 'Department' | 'D
             onAdded();
             setOpen(false);
             setName('');
+            setDepartmentType('');
+            setParentDepartment('');
         } catch (error) {
             const msg = error instanceof Error ? error.message : `Unknown error.`;
             toast({ variant: 'destructive', title: 'Error', description: msg });
@@ -52,12 +54,15 @@ function AddMetaDialog({ type, onAdded, departments }: { type: 'Department' | 'D
             setIsLoading(false);
         }
     };
+    
+    // Use DropdownMenuItem as the trigger for the dialog
+    const Trigger = type === 'Department'
+        ? <DropdownMenuItem onSelect={e => e.preventDefault()}><ListPlus className="mr-2 h-4 w-4"/> New {type}</DropdownMenuItem>
+        : <DropdownMenuItem onSelect={e => e.preventDefault()}><ListPlus className="mr-2 h-4 w-4"/> New {type}</DropdownMenuItem>;
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-                <Button variant="outline" size="sm"><ListPlus className="mr-2 h-4 w-4"/> New {type}</Button>
-            </DialogTrigger>
+            <DialogTrigger asChild>{Trigger}</DialogTrigger>
             <DialogContent>
                 <form onSubmit={handleSubmit}>
                     <DialogHeader><DialogTitle>Add New {type}</DialogTitle></DialogHeader>
