@@ -179,6 +179,7 @@ const AdminDashboard = () => {
 
 export default function DashboardPage() {
   const { user, role } = useAuth();
+  const [academicYear, setAcademicYear] = useState("");
   
   if (role === 'admin') {
       return <AdminDashboard />;
@@ -186,7 +187,6 @@ export default function DashboardPage() {
 
   // Student/Teacher Dashboard
   const name = user?.displayName?.split(' ')[0] || user?.email?.split('@')[0] || 'User';
-  const [academicYear, setAcademicYear] = useState("");
 
   return (
     <div className="flex flex-col gap-8">
