@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -346,8 +347,8 @@ export default function EmployeeHubPage() {
                 <Accordion type="multiple" className="w-full space-y-4">
                     {employeesByDepartment.map(dept => (
                         <AccordionItem value={dept.id} key={dept.id} className="border rounded-lg bg-card">
-                             <AccordionTrigger className="p-4 hover:no-underline [&>svg]:hidden">
-                                <div className="flex items-center justify-between w-full">
+                             <div className="flex items-center p-4">
+                                <AccordionTrigger className="flex-1 hover:no-underline [&>svg]:ml-auto">
                                     <div className="flex items-center gap-4">
                                         <div className="p-3 bg-primary/10 rounded-lg">
                                             <Building className="h-6 w-6 text-primary"/>
@@ -357,22 +358,19 @@ export default function EmployeeHubPage() {
                                             <p className="text-sm text-muted-foreground text-left">{dept.employees.length} employee(s)</p>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}>
-                                                    <MoreHorizontal className="h-4 w-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent onClick={(e) => e.stopPropagation()}>
-                                                <DropdownMenuLabel>Manage</DropdownMenuLabel>
-                                                <DeleteDepartmentDialog department={dept} onDeleted={fetchData} />
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                        <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
-                                    </div>
-                                </div>
-                             </AccordionTrigger>
+                                </AccordionTrigger>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}>
+                                            <MoreHorizontal className="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent onClick={(e) => e.stopPropagation()}>
+                                        <DropdownMenuLabel>Manage</DropdownMenuLabel>
+                                        <DeleteDepartmentDialog department={dept} onDeleted={fetchData} />
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </div>
                             <AccordionContent className="p-4 border-t">
                                 <div className="flex justify-end mb-4">
                                     <ManageEmployeeDialog
