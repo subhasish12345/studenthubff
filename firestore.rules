@@ -5,41 +5,23 @@ service cloud.firestore {
   match /databases/{database}/documents {
     
     function isAdmin() {
-      // Check if the user is authenticated and if their user document shows they have an 'admin' role.
-      return request.auth != null && 
-             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      // Check if the user is an admin by looking up their role in the /users collection.
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // Rules for the main data structure
-    match /colleges/{collegeId}/{document=**} {
-      // Allow any authenticated user to read data (e.g., events, notices).
-      // Write access is more specific below.
+    // Rules for the 'users' collection where roles are stored
+    match /users/{userId} {
       allow read: if request.auth != null;
+      // Allow a user to create/update their OWN document, or allow an admin to do anything.
+      allow write: if request.auth.uid == userId || isAdmin();
     }
     
-    // Admins can manage all employee, department, and designation records.
-    match /colleges/GEC/employees/{employeeId} {
-      allow read, write: if isAdmin();
-    }
-    match /colleges/GEC/departments/{departmentId} {
-      allow read, write: if isAdmin();
-    }
-     match /colleges/GEC/designations/{designationId} {
-      allow read, write: if isAdmin();
-    }
-    match /colleges/GEC/teachers/{teacherId} {
-      allow read, write: if isAdmin();
-    }
-
-    // Rules for user roles
-    match /users/{userId} {
-      // A user can read their own user document. Admins can read any user document.
-      allow read: if request.auth.uid == userId || isAdmin();
-      // A user can create their OWN user document upon first sign-up.
-      allow create: if request.auth.uid == userId;
-      // Only an admin can update or delete user roles.
-      allow update, delete: if isAdmin();
+    // Rules for the main college data structure
+    match /colleges/GEC/{document=**} {
+      // Admins can write to anywhere in the college structure
+      allow write: if isAdmin();
+      // Any authenticated user (student, teacher, admin) can read data
+      allow read: if request.auth != null;
     }
   }
 }
