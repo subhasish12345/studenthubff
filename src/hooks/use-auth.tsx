@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
@@ -17,7 +15,7 @@ import {
 import { auth, db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useToast } from './use-toast';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
 
 export type Role = 'student' | 'teacher' | 'admin';
 
@@ -47,13 +45,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setUser(user);
-        // Check for role from Firestore
         const userRoleDoc = await getDoc(doc(db, 'users', user.uid));
         if (userRoleDoc.exists()) {
           setRole(userRoleDoc.data().role);
         } else {
-          // Default role if not set - can be student or based on some other logic
-          // For now, if it's the admin email, set admin, otherwise student
            if (user.email === ADMIN_EMAIL) {
               await setRoleInFirestore(user.uid, 'admin');
               setRole('admin');
@@ -83,14 +78,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signUp = async (email: string, password: string) => {
     await setPersistence(auth, browserLocalPersistence);
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    // Set default role for new sign-ups
     const defaultRole = email === ADMIN_EMAIL ? 'admin' : 'student';
     await setRoleInFirestore(userCredential.user.uid, defaultRole);
     setRole(defaultRole);
     return userCredential;
   }
 
-  const logIn = (email: string, password: string) => {
+  const logIn = async (email: string, password: string) => {
+    // Check if user document exists to prevent creating new users on login
+    const q = query(collection(db, "users"), where("email", "==", email));
+    const querySnapshot = await getDocs(q);
+    
+    // This is a simplified check. A more robust system would check the `teachers` or `students` collection
+    // to ensure the user exists in the correct context before attempting to sign in.
+    if(querySnapshot.empty) {
+        // Attempting a more generic check across teachers
+        const teachersQuery = query(collection(db, "colleges", "GEC", "teachers"), where("email", "==", email));
+        const teachersSnapshot = await getDocs(teachersQuery);
+        if(teachersSnapshot.empty){
+             throw new Error(`No user found with the email ${email}. Please check your credentials or sign up.`);
+        }
+    }
+
     return signInWithEmailAndPassword(auth, email, password);
   }
   
@@ -99,7 +108,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const result = await signInWithPopup(auth, provider);
     const user = result.user;
     
-    // Check if user has a role, if not, set a default one
     const userRoleDoc = await getDoc(doc(db, 'users', user.uid));
     if (!userRoleDoc.exists()) {
        if (user.email === ADMIN_EMAIL) {
@@ -139,5 +147,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-    

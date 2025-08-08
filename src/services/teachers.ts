@@ -1,7 +1,5 @@
-
-import { db, auth } from '@/lib/firebase';
-import { collection, addDoc, getDocs, doc, setDoc, query, orderBy, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { db } from '@/lib/firebase';
+import { collection, getDocs, doc, setDoc, query, orderBy, updateDoc, deleteDoc } from 'firebase/firestore';
 
 const COLLEGE_ID = 'GEC';
 
@@ -17,46 +15,20 @@ export interface Teacher {
   role: 'teacher';
 }
 
-// Function to add a new teacher to the central pool AND create an auth user
-export const addTeacher = async (teacherData: Omit<Teacher, 'id'>, password: string) => {
-  if (!password) {
-      throw new Error("Password is required to create a teacher user.");
-  }
-  
-  // This is a temporary solution for creating users on the client.
-  // In a production app, you would use a Cloud Function to do this securely.
-  // We are creating a temporary auth instance to not interfere with the currently logged-in admin's session.
+// Function to add a new teacher's profile to the central pool.
+// User account should be created separately.
+export const addTeacher = async (uid: string, teacherData: Omit<Teacher, 'id'>) => {
   try {
-      const { user } = await createUserWithEmailAndPassword(auth, teacherData.email, password);
-      
-      if (!user) {
-          throw new Error('Failed to create user account.');
-      }
-      
-      // Now, save the teacher's profile and role in Firestore
-      const fbBatch = writeBatch(db);
-      
-      // Teacher profile in central pool
-      const teacherRef = doc(db, 'colleges', COLLEGE_ID, 'teachers', user.uid);
-      fbBatch.set(teacherRef, teacherData);
-      
-      // User role document
-      const userRoleRef = doc(db, 'users', user.uid);
-      fbBatch.set(userRoleRef, { role: 'teacher' });
-
-      await fbBatch.commit();
-      
-      return user.uid;
-
+    if (!uid) {
+      throw new Error("User ID is required to add a teacher profile.");
+    }
+    // Teacher profile in central pool, using UID as document ID
+    const teacherRef = doc(db, 'colleges', COLLEGE_ID, 'teachers', uid);
+    await setDoc(teacherRef, teacherData);
+    return uid;
   } catch (e) {
-      console.error("Error adding teacher: ", e);
-      if (e instanceof Error) {
-        if (e.message.includes('auth/email-already-in-use')) {
-            throw new Error('A user with this email already exists.');
-        }
-        throw new Error(e.message);
-      }
-      throw new Error('Failed to add teacher');
+    console.error("Error adding teacher profile: ", e);
+    throw new Error('Failed to add teacher profile to the database.');
   }
 };
 

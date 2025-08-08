@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -21,6 +19,9 @@ import { createDegreeStructure } from '@/services/setup-collections';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Batch, addBatch, getBatchesForStream, deleteBatch } from '@/services/batches';
 import { Teacher, addTeacher, getTeachers, updateTeacher, deleteTeacher } from '@/services/teachers';
+import { useAuth } from '@/hooks/use-auth';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 
 function DeleteTeacherDialog({ teacher, onTeacherDeleted }: { teacher: Teacher, onTeacherDeleted: () => void }) {
@@ -78,6 +79,7 @@ function AddEditTeacherDialog({ mode, teacher, onTeacherUpdated }: { mode: 'add'
     const [isLoading, setIsLoading] = useState(false);
     const [open, setOpen] = useState(false);
     const { toast } = useToast();
+    const { setRole } = useAuth();
     
     const title = mode === 'add' ? 'Add New Teacher' : `Edit ${teacher?.name}`;
     const buttonText = mode === 'add' ? 'Add Teacher' : 'Save Changes';
@@ -92,7 +94,9 @@ function AddEditTeacherDialog({ mode, teacher, onTeacherUpdated }: { mode: 'add'
         const teacherData = { name, email, employeeId, phone, gender, status, role: 'teacher' as const };
         try {
             if (mode === 'add') {
-                await addTeacher(teacherData, password);
+                const { user } = await createUserWithEmailAndPassword(auth, email, password);
+                await addTeacher(user.uid, teacherData);
+                await setRole(user.uid, 'teacher');
                 toast({ title: 'Success', description: 'Teacher added and user account created.' });
             } else if (teacher) {
                 await updateTeacher(teacher.id, teacherData);
@@ -101,7 +105,10 @@ function AddEditTeacherDialog({ mode, teacher, onTeacherUpdated }: { mode: 'add'
             onTeacherUpdated();
             setOpen(false);
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : `An unknown error occurred.`;
+            let errorMessage = error instanceof Error ? error.message : `An unknown error occurred.`;
+            if (errorMessage.includes('auth/email-already-in-use')) {
+                errorMessage = 'A user with this email already exists.';
+            }
             toast({ variant: 'destructive', title: 'Error', description: errorMessage });
         } finally {
             setIsLoading(false);
@@ -1021,4 +1028,3 @@ export default function AdminPage() {
         </div>
     );
 }
-
