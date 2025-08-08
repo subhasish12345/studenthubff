@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { PlusCircle, MoreHorizontal, Loader2, Edit, Trash2, Settings, ListPlus } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, Loader2, Edit, Trash2, Settings, ListPlus, Building, ChevronDown, UserPlus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -14,13 +14,14 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 import { Employee, addEmployee, getEmployees, updateEmployee, deleteEmployee, EmployeeStatus, SalaryType } from '@/services/employees';
 import { Department, getDepartments, addDepartment } from '@/services/departments';
 import { Designation, getDesignations, addDesignation } from '@/services/designations';
 
 // A simplified dialog for adding a department or designation
-function AddMetaDialog({ type, onAdded, departments }: { type: 'Department' | 'Designation', onAdded: () => void, departments?: Department[] }) {
+function AddMetaDialog({ type, onAdded, departments, triggerButton }: { type: 'Department' | 'Designation', onAdded: () => void, departments?: Department[], triggerButton: React.ReactNode }) {
     const [name, setName] = useState('');
     const [departmentType, setDepartmentType] = useState('');
     const [parentDepartment, setParentDepartment] = useState('');
@@ -54,15 +55,10 @@ function AddMetaDialog({ type, onAdded, departments }: { type: 'Department' | 'D
             setIsLoading(false);
         }
     };
-    
-    // Use DropdownMenuItem as the trigger for the dialog
-    const Trigger = type === 'Department'
-        ? <DropdownMenuItem onSelect={e => e.preventDefault()}><ListPlus className="mr-2 h-4 w-4"/> New {type}</DropdownMenuItem>
-        : <DropdownMenuItem onSelect={e => e.preventDefault()}><ListPlus className="mr-2 h-4 w-4"/> New {type}</DropdownMenuItem>;
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>{Trigger}</DialogTrigger>
+            <DialogTrigger asChild>{triggerButton}</DialogTrigger>
             <DialogContent>
                 <form onSubmit={handleSubmit}>
                     <DialogHeader><DialogTitle>Add New {type}</DialogTitle></DialogHeader>
@@ -112,12 +108,14 @@ function AddMetaDialog({ type, onAdded, departments }: { type: 'Department' | 'D
 }
 
 
-function ManageEmployeeDialog({ mode, employee, onEmployeeUpdated, departments, designations }: { 
+function ManageEmployeeDialog({ mode, employee, onEmployeeUpdated, departments, designations, preselectedDepartmentId, triggerButton }: { 
     mode: 'add' | 'edit', 
     employee?: Employee, 
     onEmployeeUpdated: () => void,
     departments: Department[],
     designations: Designation[],
+    preselectedDepartmentId?: string,
+    triggerButton: React.ReactNode,
 }) {
     const [open, setOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
@@ -129,7 +127,7 @@ function ManageEmployeeDialog({ mode, employee, onEmployeeUpdated, departments, 
         employeeId: employee?.employeeId || '',
         email: employee?.email || '',
         phone: employee?.phone || '',
-        departmentId: employee?.departmentId || '',
+        departmentId: preselectedDepartmentId || employee?.departmentId || '',
         designationId: employee?.designationId || '',
         dateOfJoining: employee ? new Date(employee.dateOfJoining).toISOString().split('T')[0] : '',
         status: employee?.status || 'Active',
@@ -144,7 +142,7 @@ function ManageEmployeeDialog({ mode, employee, onEmployeeUpdated, departments, 
                 employeeId: employee?.employeeId || '',
                 email: employee?.email || '',
                 phone: employee?.phone || '',
-                departmentId: employee?.departmentId || '',
+                departmentId: preselectedDepartmentId || employee?.departmentId || '',
                 designationId: employee?.designationId || '',
                 dateOfJoining: employee ? new Date(employee.dateOfJoining).toISOString().split('T')[0] : '',
                 status: employee?.status || 'Active',
@@ -152,7 +150,7 @@ function ManageEmployeeDialog({ mode, employee, onEmployeeUpdated, departments, 
                 salaryAmount: employee?.salaryAmount || 0,
             });
         }
-    }, [open, employee]);
+    }, [open, employee, preselectedDepartmentId]);
     
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { id, value } = e.target;
@@ -198,11 +196,7 @@ function ManageEmployeeDialog({ mode, employee, onEmployeeUpdated, departments, 
     return (
          <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                {mode === 'add' ? (
-                    <Button><PlusCircle className="mr-2 h-4 w-4" /> Add Employee</Button>
-                ) : (
-                    <DropdownMenuItem onSelect={e => e.preventDefault()}><Edit className="mr-2 h-4 w-4"/> Edit</DropdownMenuItem>
-                )}
+                {triggerButton}
             </DialogTrigger>
             <DialogContent className="sm:max-w-3xl">
                 <form onSubmit={handleSubmit}>
@@ -268,86 +262,124 @@ export default function EmployeeHubPage() {
         fetchData();
     }, []);
 
-    const getDepartmentName = (id: string) => departments.find(d => d.id === id)?.name || 'N/A';
     const getDesignationName = (id: string) => designations.find(d => d.id === id)?.name || 'N/A';
+
+    const employeesByDepartment = useMemo(() => {
+        return departments.map(dept => ({
+            ...dept,
+            employees: employees.filter(emp => emp.departmentId === dept.id)
+        }));
+    }, [departments, employees]);
 
     return (
         <div className="flex flex-col gap-8">
-             <div>
-                <h1 className="text-4xl font-bold font-headline">Employee Hub</h1>
-                <p className="text-muted-foreground">Manage all staff, departments, and designations.</p>
+             <div className="flex items-center justify-between">
+                 <div>
+                    <h1 className="text-4xl font-bold font-headline">Employee Hub</h1>
+                    <p className="text-muted-foreground">Manage all staff, departments, and designations.</p>
+                </div>
+                 <div className="flex items-center gap-2">
+                     <AddMetaDialog 
+                        type="Department" 
+                        onAdded={fetchData} 
+                        triggerButton={<Button variant="outline"><Building className="mr-2 h-4 w-4"/> Add Department</Button>}
+                     />
+                     <AddMetaDialog 
+                        type="Designation" 
+                        onAdded={fetchData} 
+                        departments={departments}
+                        triggerButton={<Button variant="outline"><ListPlus className="mr-2 h-4 w-4"/> Add Designation</Button>}
+                     />
+                </div>
             </div>
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                    <div>
-                        <CardTitle>All Employees</CardTitle>
-                        <CardDescription>A complete list of all staff members in the institution.</CardDescription>
-                    </div>
-                    <div className="flex items-center gap-2">
-                         <DropdownMenu>
-                            <DropdownMenuTrigger asChild><Button variant="outline"><Settings className="mr-2 h-4 w-4"/>Manage</Button></DropdownMenuTrigger>
-                            <DropdownMenuContent>
-                                <DropdownMenuLabel>Manage Meta</DropdownMenuLabel>
-                                <DropdownMenuSeparator/>
-                                <AddMetaDialog type="Department" onAdded={fetchData} />
-                                <AddMetaDialog type="Designation" onAdded={fetchData} departments={departments} />
-                            </DropdownMenuContent>
-                         </DropdownMenu>
-                         <ManageEmployeeDialog mode="add" onEmployeeUpdated={fetchData} departments={departments} designations={designations} />
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Name</TableHead>
-                                <TableHead>Employee ID</TableHead>
-                                <TableHead>Department</TableHead>
-                                <TableHead>Designation</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead><span className="sr-only">Actions</span></TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                           {isLoading ? (
-                                <TableRow>
-                                    <TableCell colSpan={6} className="text-center">
-                                        <div className="flex justify-center items-center p-8">
-                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                            Loading employees...
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                           ) : employees.length > 0 ? (
-                                employees.map(emp => (
-                                    <TableRow key={emp.id}>
-                                        <TableCell className="font-medium">{emp.fullName}</TableCell>
-                                        <TableCell>{emp.employeeId}</TableCell>
-                                        <TableCell>{getDepartmentName(emp.departmentId)}</TableCell>
-                                        <TableCell>{getDesignationName(emp.designationId)}</TableCell>
-                                        <TableCell><Badge variant={emp.status === 'Active' ? 'default' : 'secondary'}>{emp.status}</Badge></TableCell>
-                                        <TableCell className="text-right">
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><MoreHorizontal/></Button></DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                    <ManageEmployeeDialog mode="edit" employee={emp} onEmployeeUpdated={fetchData} departments={departments} designations={designations}/>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
-                           ) : (
-                               <TableRow>
-                                    <TableCell colSpan={6} className="text-center p-8">
-                                        No employees found. Add one to get started.
-                                    </TableCell>
-                                </TableRow>
-                           )}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
+            
+             {isLoading ? (
+                <div className="text-center p-8">
+                    <Loader2 className="mr-2 h-8 w-8 animate-spin inline" />
+                </div>
+             ) : (
+                <Accordion type="multiple" className="w-full space-y-4">
+                    {employeesByDepartment.map(dept => (
+                        <AccordionItem value={dept.id} key={dept.id} className="border rounded-lg bg-card">
+                             <AccordionTrigger className="p-4 hover:no-underline">
+                                <div className="flex items-center gap-4">
+                                     <div className="p-3 bg-primary/10 rounded-lg">
+                                        <Building className="h-6 w-6 text-primary"/>
+                                    </div>
+                                    <div>
+                                        <h3 className="text-lg font-semibold text-left">{dept.name}</h3>
+                                        <p className="text-sm text-muted-foreground text-left">{dept.employees.length} employee(s)</p>
+                                    </div>
+                                </div>
+                             </AccordionTrigger>
+                            <AccordionContent className="p-4 border-t">
+                                <div className="flex justify-end mb-4">
+                                    <ManageEmployeeDialog
+                                        mode="add"
+                                        onEmployeeUpdated={fetchData}
+                                        departments={departments}
+                                        designations={designations}
+                                        preselectedDepartmentId={dept.id}
+                                        triggerButton={<Button><UserPlus className="mr-2 h-4 w-4" /> Add Employee to {dept.name}</Button>}
+                                    />
+                                </div>
+                                {dept.employees.length > 0 ? (
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Name</TableHead>
+                                                <TableHead>Employee ID</TableHead>
+                                                <TableHead>Designation</TableHead>
+                                                <TableHead>Status</TableHead>
+                                                <TableHead><span className="sr-only">Actions</span></TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {dept.employees.map(emp => (
+                                                <TableRow key={emp.id}>
+                                                    <TableCell className="font-medium">{emp.fullName}</TableCell>
+                                                    <TableCell>{emp.employeeId}</TableCell>
+                                                    <TableCell>{getDesignationName(emp.designationId)}</TableCell>
+                                                    <TableCell><Badge variant={emp.status === 'Active' ? 'default' : 'secondary'}>{emp.status}</Badge></TableCell>
+                                                    <TableCell className="text-right">
+                                                         <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><MoreHorizontal/></Button></DropdownMenuTrigger>
+                                                            <DropdownMenuContent align="end">
+                                                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                                <ManageEmployeeDialog 
+                                                                    mode="edit" 
+                                                                    employee={emp} 
+                                                                    onEmployeeUpdated={fetchData} 
+                                                                    departments={departments} 
+                                                                    designations={designations}
+                                                                    triggerButton={<DropdownMenuItem onSelect={(e) => e.preventDefault()}><Edit className="mr-2 h-4 w-4" /> Edit Employee</DropdownMenuItem>}
+                                                                />
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                ) : (
+                                    <div className="text-center p-8 text-muted-foreground">
+                                        No employees found in this department.
+                                    </div>
+                                )}
+                            </AccordionContent>
+                        </AccordionItem>
+                    ))}
+                </Accordion>
+             )}
+
+             { !isLoading && departments.length === 0 && (
+                 <Card>
+                    <CardContent className="text-center p-8">
+                        <CardTitle>No Departments Found</CardTitle>
+                        <CardDescription className="mt-2">Create a department to get started.</CardDescription>
+                    </CardContent>
+                 </Card>
+             )}
         </div>
     )
 }
