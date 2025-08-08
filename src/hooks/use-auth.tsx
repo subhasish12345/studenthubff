@@ -84,7 +84,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await setPersistence(auth, browserLocalPersistence);
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     // Set default role for new sign-ups
-    await setRoleInFirestore(userCredential.user.uid, 'student');
+    const defaultRole = email === ADMIN_EMAIL ? 'admin' : 'student';
+    await setRoleInFirestore(userCredential.user.uid, defaultRole);
+    setRole(defaultRole);
     return userCredential;
   }
 

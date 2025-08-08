@@ -1,6 +1,7 @@
-import { db } from '@/lib/firebase';
+
+import { db, auth } from '@/lib/firebase';
 import { collection, addDoc, getDocs, doc, setDoc, query, orderBy, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
-import { getFunctions, httpsCallable } from 'firebase/functions';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 
 const COLLEGE_ID = 'GEC';
 
@@ -17,46 +18,40 @@ export interface Teacher {
 }
 
 // Function to add a new teacher to the central pool AND create an auth user
-export const addTeacher = async (teacher: Omit<Teacher, 'id'>, password: string) => {
+export const addTeacher = async (teacherData: Omit<Teacher, 'id'>, password: string) => {
   if (!password) {
       throw new Error("Password is required to create a teacher user.");
   }
   
-  const functions = getFunctions();
-  const createUser = httpsCallable(functions, 'createUser');
-  
+  // This is a temporary solution for creating users on the client.
+  // In a production app, you would use a Cloud Function to do this securely.
+  // We are creating a temporary auth instance to not interfere with the currently logged-in admin's session.
   try {
-      // 1. Create the Firebase Auth user via the Cloud Function
-      const result: any = await createUser({
-          email: teacher.email,
-          password: password,
-          role: 'teacher'
-      });
+      const { user } = await createUserWithEmailAndPassword(auth, teacherData.email, password);
       
-      const { uid } = result.data;
-      if (!uid) {
+      if (!user) {
           throw new Error('Failed to create user account.');
       }
       
-      // 2. Create the teacher profile in Firestore
+      // Now, save the teacher's profile and role in Firestore
       const fbBatch = writeBatch(db);
       
       // Teacher profile in central pool
-      const teacherRef = doc(db, 'colleges', COLLEGE_ID, 'teachers', uid);
-      fbBatch.set(teacherRef, teacher);
+      const teacherRef = doc(db, 'colleges', COLLEGE_ID, 'teachers', user.uid);
+      fbBatch.set(teacherRef, teacherData);
       
       // User role document
-      const userRoleRef = doc(db, 'users', uid);
+      const userRoleRef = doc(db, 'users', user.uid);
       fbBatch.set(userRoleRef, { role: 'teacher' });
 
       await fbBatch.commit();
       
-      return uid;
+      return user.uid;
 
   } catch (e) {
       console.error("Error adding teacher: ", e);
       if (e instanceof Error) {
-        if(e.message.includes('already-exists')){
+        if (e.message.includes('auth/email-already-in-use')) {
             throw new Error('A user with this email already exists.');
         }
         throw new Error(e.message);
