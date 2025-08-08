@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
@@ -53,6 +54,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               await setRoleInFirestore(user.uid, 'admin');
               setRole('admin');
            } else {
+              // This case handles Google Sign-in for the first time for a non-admin
               await setRoleInFirestore(user.uid, 'student');
               setRole('student');
            }
@@ -78,28 +80,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signUp = async (email: string, password: string) => {
     await setPersistence(auth, browserLocalPersistence);
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    const defaultRole = email === ADMIN_EMAIL ? 'admin' : 'student';
-    await setRoleInFirestore(userCredential.user.uid, defaultRole);
-    setRole(defaultRole);
+    // onAuthStateChanged will handle setting the role in firestore
     return userCredential;
   }
 
   const logIn = async (email: string, password: string) => {
-    // Check if user document exists to prevent creating new users on login
-    const q = query(collection(db, "users"), where("email", "==", email));
-    const querySnapshot = await getDocs(q);
-    
-    // This is a simplified check. A more robust system would check the `teachers` or `students` collection
-    // to ensure the user exists in the correct context before attempting to sign in.
-    if(querySnapshot.empty) {
-        // Attempting a more generic check across teachers
-        const teachersQuery = query(collection(db, "colleges", "GEC", "teachers"), where("email", "==", email));
-        const teachersSnapshot = await getDocs(teachersQuery);
-        if(teachersSnapshot.empty){
-             throw new Error(`No user found with the email ${email}. Please check your credentials or sign up.`);
-        }
-    }
-
+    // Directly try to sign in. The onAuthStateChanged listener will handle role fetching.
+    // Firebase Auth will throw specific errors like 'auth/user-not-found' or 'auth/wrong-password'
+    // which are now handled in the LoginPage component.
     return signInWithEmailAndPassword(auth, email, password);
   }
   
@@ -108,16 +96,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const result = await signInWithPopup(auth, provider);
     const user = result.user;
     
-    const userRoleDoc = await getDoc(doc(db, 'users', user.uid));
-    if (!userRoleDoc.exists()) {
-       if (user.email === ADMIN_EMAIL) {
-          await setRoleInFirestore(user.uid, 'admin');
-          setRole('admin');
-       } else {
-          await setRoleInFirestore(user.uid, 'student');
-          setRole('student');
-       }
-    }
+    // The onAuthStateChanged listener will check if the user is new and set their role.
     return result;
   }
 
@@ -147,3 +126,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+    

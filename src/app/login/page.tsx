@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from "@/components/ui/button"
@@ -21,6 +22,7 @@ import { useAuth } from "@/hooks/use-auth"
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
+import { Loader2 } from "lucide-react";
 
 const GoogleIcon = (props: any) => (
   <svg viewBox="0 0 48 48" {...props}>
@@ -36,37 +38,57 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('student');
+  const [isLoading, setIsLoading] = useState(false);
   const { signUp, logIn, logInWithGoogle } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
 
-  const handleSignUp = async () => {
+  const handleAuth = async (action: 'login' | 'signup') => {
+    setIsLoading(true);
     try {
-      await signUp(email, password);
+      if(action === 'login') {
+        await logIn(email, password);
+        toast({ title: 'Success!', description: 'You are successfully logged in.' });
+      } else {
+        await signUp(email, password);
+        toast({ title: 'Success!', description: 'You are successfully signed up and logged in.' });
+      }
       router.push('/');
-      toast({ title: 'Success!', description: 'You are successfully signed up and logged in.' });
     } catch (error: any) {
-      toast({ variant: "destructive", title: 'Sign up failed.', description: error.message });
-    }
-  };
-
-  const handleLogin = async () => {
-    try {
-      await logIn(email, password);
-      router.push('/');
-      toast({ title: 'Success!', description: 'You are successfully logged in.' });
-    } catch (error: any) {
-      toast({ variant: "destructive", title: 'Login failed.', description: error.message });
+        let errorMessage = 'An unexpected error occurred. Please try again.';
+        if(error.code) {
+          switch(error.code) {
+            case 'auth/invalid-credential':
+            case 'auth/user-not-found':
+            case 'auth/wrong-password':
+              errorMessage = 'Invalid email or password. Please check your credentials.';
+              break;
+            case 'auth/email-already-in-use':
+              errorMessage = 'This email is already in use. Please log in or use a different email.';
+              break;
+            case 'auth/weak-password':
+                errorMessage = 'The password is too weak. Please use a stronger password.';
+                break;
+            default:
+              errorMessage = error.message;
+          }
+        }
+        toast({ variant: "destructive", title: `${action === 'login' ? 'Login' : 'Sign up'} failed.`, description: errorMessage });
+    } finally {
+        setIsLoading(false);
     }
   };
   
   const handleGoogleSignIn = async () => {
+    setIsLoading(true);
     try {
       await logInWithGoogle();
       router.push('/');
       toast({ title: 'Success!', description: 'You are successfully logged in with Google.'});
     } catch(error: any) {
       toast({ variant: "destructive", title: 'Google sign in failed.', description: error.message });
+    } finally {
+        setIsLoading(false);
     }
   }
 
@@ -82,32 +104,35 @@ export default function LoginPage() {
         
         <TabsContent value="student">
           <LoginForm 
-            handleLogin={handleLogin} 
-            handleSignUp={handleSignUp}
+            handleLogin={() => handleAuth('login')} 
+            handleSignUp={() => handleAuth('signup')}
             handleGoogleSignIn={handleGoogleSignIn}
             setEmail={setEmail}
             setPassword={setPassword}
-            role="Student" />
+            role="Student"
+            isLoading={isLoading} />
         </TabsContent>
 
         <TabsContent value="teacher">
           <LoginForm 
-            handleLogin={handleLogin}
-            handleSignUp={handleSignUp}
+            handleLogin={() => handleAuth('login')}
+            handleSignUp={() => handleAuth('signup')}
             handleGoogleSignIn={handleGoogleSignIn}
             setEmail={setEmail}
             setPassword={setPassword}
-            role="Teacher" />
+            role="Teacher"
+            isLoading={isLoading} />
         </TabsContent>
 
         <TabsContent value="admin">
           <LoginForm 
-            handleLogin={handleLogin} 
-            handleSignUp={handleSignUp}
+            handleLogin={() => handleAuth('login')}
+            handleSignUp={() => handleAuth('signup')}
             handleGoogleSignIn={handleGoogleSignIn}
             setEmail={setEmail}
             setPassword={setPassword}
-            role="Admin" />
+            role="Admin"
+            isLoading={isLoading} />
         </TabsContent>
 
       </Tabs>
@@ -115,7 +140,7 @@ export default function LoginPage() {
   )
 }
 
-function LoginForm({ handleLogin, handleSignUp, handleGoogleSignIn, setEmail, setPassword, role }: any) {
+function LoginForm({ handleLogin, handleSignUp, handleGoogleSignIn, setEmail, setPassword, role, isLoading }: any) {
   return (
     <Card>
       <CardHeader>
@@ -126,18 +151,24 @@ function LoginForm({ handleLogin, handleSignUp, handleGoogleSignIn, setEmail, se
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
-          <Input id="email" type="email" placeholder="m@example.com" onChange={(e) => setEmail(e.target.value)} />
+          <Label htmlFor={`email-${role}`}>Email</Label>
+          <Input id={`email-${role}`} type="email" placeholder="m@example.com" onChange={(e) => setEmail(e.target.value)} disabled={isLoading} />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="password">Password</Label>
-          <Input id="password" type="password" onChange={(e) => setPassword(e.target.value)} />
+          <Label htmlFor={`password-${role}`}>Password</Label>
+          <Input id={`password-${role}`} type="password" onChange={(e) => setPassword(e.target.value)} disabled={isLoading} />
         </div>
       </CardContent>
       <CardFooter className="flex flex-col gap-4">
         <div className="flex gap-2 w-full">
-          <Button onClick={handleLogin} className="flex-1">Login</Button>
-          <Button onClick={handleSignUp} variant="outline" className="flex-1">Sign up</Button>
+          <Button onClick={handleLogin} className="flex-1" disabled={isLoading}>
+            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Login
+          </Button>
+          <Button onClick={handleSignUp} variant="outline" className="flex-1" disabled={isLoading}>
+            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Sign up
+          </Button>
         </div>
         <div className="relative w-full">
           <div className="absolute inset-0 flex items-center">
@@ -149,11 +180,13 @@ function LoginForm({ handleLogin, handleSignUp, handleGoogleSignIn, setEmail, se
             </span>
           </div>
         </div>
-        <Button variant="outline" className="w-full" onClick={handleGoogleSignIn}>
-          <GoogleIcon className="mr-2 h-5 w-5" />
+        <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading}>
+          {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GoogleIcon className="mr-2 h-5 w-5" />}
           Google
         </Button>
       </CardFooter>
     </Card>
   )
 }
+
+    
