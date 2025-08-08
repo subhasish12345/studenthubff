@@ -41,6 +41,8 @@ export const getDepartments = async (): Promise<Department[]> => {
 // Delete a department
 export const deleteDepartment = async (departmentId: string) => {
   try {
+    // TODO: Add logic here to check if any employees are using this department first.
+    // If so, either prevent deletion or handle re-assignment.
     const departmentRef = doc(db, 'colleges', COLLEGE_ID, 'departments', departmentId);
     await deleteDoc(departmentRef);
   } catch (e) {

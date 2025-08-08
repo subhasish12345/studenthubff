@@ -17,8 +17,53 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 import { Employee, addEmployee, getEmployees, updateEmployee, deleteEmployee, EmployeeStatus, SalaryType } from '@/services/employees';
-import { Department, getDepartments, addDepartment } from '@/services/departments';
+import { Department, getDepartments, addDepartment, deleteDepartment } from '@/services/departments';
 import { Designation, getDesignations, addDesignation } from '@/services/designations';
+
+function DeleteDepartmentDialog({ department, onDeleted }: { department: Department, onDeleted: () => void }) {
+    const [isLoading, setIsLoading] = useState(false);
+    const { toast } = useToast();
+
+    const handleDelete = async () => {
+        setIsLoading(true);
+        try {
+            await deleteDepartment(department.id);
+            toast({ title: 'Success', description: 'Department deleted successfully.' });
+            onDeleted();
+        } catch (error) {
+            const msg = error instanceof Error ? error.message : `Unknown error.`;
+            toast({ variant: 'destructive', title: 'Error', description: msg });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <AlertDialog>
+            <AlertDialogTrigger asChild>
+                 <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
+                    <Trash2 className="mr-2 h-4 w-4" /> Delete Department
+                </DropdownMenuItem>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This will permanently delete the "{department.name}" department. This action cannot be undone.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete} disabled={isLoading} className="bg-destructive hover:bg-destructive/90">
+                        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Yes, delete
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    );
+}
+
 
 // A simplified dialog for adding a department or designation
 function AddMetaDialog({ type, onAdded, departments, triggerButton }: { type: 'Department' | 'Designation', onAdded: () => void, departments?: Department[], triggerButton: React.ReactNode }) {
@@ -301,14 +346,30 @@ export default function EmployeeHubPage() {
                 <Accordion type="multiple" className="w-full space-y-4">
                     {employeesByDepartment.map(dept => (
                         <AccordionItem value={dept.id} key={dept.id} className="border rounded-lg bg-card">
-                             <AccordionTrigger className="p-4 hover:no-underline">
-                                <div className="flex items-center gap-4">
-                                     <div className="p-3 bg-primary/10 rounded-lg">
-                                        <Building className="h-6 w-6 text-primary"/>
+                             <AccordionTrigger className="p-4 hover:no-underline [&>svg]:hidden">
+                                <div className="flex items-center justify-between w-full">
+                                    <div className="flex items-center gap-4">
+                                        <div className="p-3 bg-primary/10 rounded-lg">
+                                            <Building className="h-6 w-6 text-primary"/>
+                                        </div>
+                                        <div>
+                                            <h3 className="text-lg font-semibold text-left">{dept.name}</h3>
+                                            <p className="text-sm text-muted-foreground text-left">{dept.employees.length} employee(s)</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <h3 className="text-lg font-semibold text-left">{dept.name}</h3>
-                                        <p className="text-sm text-muted-foreground text-left">{dept.employees.length} employee(s)</p>
+                                    <div className="flex items-center gap-2">
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}>
+                                                    <MoreHorizontal className="h-4 w-4" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent onClick={(e) => e.stopPropagation()}>
+                                                <DropdownMenuLabel>Manage</DropdownMenuLabel>
+                                                <DeleteDepartmentDialog department={dept} onDeleted={fetchData} />
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                        <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
                                     </div>
                                 </div>
                              </AccordionTrigger>
