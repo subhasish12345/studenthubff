@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
@@ -13,11 +14,12 @@ import {
   setPersistence,
   browserLocalPersistence
 } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useToast } from './use-toast';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
-type Role = 'student' | 'teacher' | 'admin';
+export type Role = 'student' | 'teacher' | 'admin';
 
 interface AuthContextType {
   user: User | null;
@@ -27,11 +29,11 @@ interface AuthContextType {
   logIn: (email: string, password: string) => Promise<any>;
   logInWithGoogle: () => Promise<any>;
   logOut: () => Promise<any>;
+  setRole: (uid: string, role: Role) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Hardcoded admin email
 const ADMIN_EMAIL = 'subhasishnayak38@gmail.com';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -42,15 +44,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { toast } = useToast();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setUser(user);
-        // Check for admin role
-        if (user.email === ADMIN_EMAIL) {
-          setRole('admin');
+        // Check for role from Firestore
+        const userRoleDoc = await getDoc(doc(db, 'users', user.uid));
+        if (userRoleDoc.exists()) {
+          setRole(userRoleDoc.data().role);
         } else {
-          // TODO: Implement logic to determine teacher or student role from database
-          setRole('student'); 
+          // Default role if not set - can be student or based on some other logic
+          // For now, if it's the admin email, set admin, otherwise student
+           if (user.email === ADMIN_EMAIL) {
+              await setRoleInFirestore(user.uid, 'admin');
+              setRole('admin');
+           } else {
+              await setRoleInFirestore(user.uid, 'student');
+              setRole('student');
+           }
         }
       } else {
         setUser(null);
@@ -61,24 +71,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => unsubscribe();
   }, []);
   
+  const setRoleInFirestore = async (uid: string, role: Role) => {
+      try {
+          await setDoc(doc(db, 'users', uid), { role }, { merge: true });
+      } catch (error) {
+          console.error("Error setting user role:", error);
+          toast({ variant: 'destructive', title: 'Error', description: 'Could not set user role.' });
+      }
+  };
+
   const signUp = async (email: string, password: string) => {
     await setPersistence(auth, browserLocalPersistence);
-    return createUserWithEmailAndPassword(auth, email, password);
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    // Set default role for new sign-ups
+    await setRoleInFirestore(userCredential.user.uid, 'student');
+    return userCredential;
   }
 
   const logIn = (email: string, password: string) => {
     return signInWithEmailAndPassword(auth, email, password);
   }
   
-  const logInWithGoogle = () => {
+  const logInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
-    // This is a common practice to ensure the auth domain is correctly set.
-    if(auth.app.options.authDomain) {
-      provider.setCustomParameters({
-        'hd': auth.app.options.authDomain.split('.').slice(-2).join('.')
-      });
+    const result = await signInWithPopup(auth, provider);
+    const user = result.user;
+    
+    // Check if user has a role, if not, set a default one
+    const userRoleDoc = await getDoc(doc(db, 'users', user.uid));
+    if (!userRoleDoc.exists()) {
+       if (user.email === ADMIN_EMAIL) {
+          await setRoleInFirestore(user.uid, 'admin');
+          setRole('admin');
+       } else {
+          await setRoleInFirestore(user.uid, 'student');
+          setRole('student');
+       }
     }
-    return signInWithPopup(auth, provider);
+    return result;
   }
 
   const logOut = async () => {
@@ -93,7 +123,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signUp,
     logIn,
     logInWithGoogle,
-    logOut
+    logOut,
+    setRole: setRoleInFirestore
   };
 
   return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;

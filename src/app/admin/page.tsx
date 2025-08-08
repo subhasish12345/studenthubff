@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -69,6 +70,7 @@ function DeleteTeacherDialog({ teacher, onTeacherDeleted }: { teacher: Teacher, 
 function AddEditTeacherDialog({ mode, teacher, onTeacherUpdated }: { mode: 'add' | 'edit', teacher?: Teacher, onTeacherUpdated: () => void }) {
     const [name, setName] = useState(teacher?.name || '');
     const [email, setEmail] = useState(teacher?.email || '');
+    const [password, setPassword] = useState('');
     const [employeeId, setEmployeeId] = useState(teacher?.employeeId || '');
     const [phone, setPhone] = useState(teacher?.phone || '');
     const [gender, setGender] = useState(teacher?.gender || '');
@@ -82,7 +84,7 @@ function AddEditTeacherDialog({ mode, teacher, onTeacherUpdated }: { mode: 'add'
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!name || !email || !employeeId) {
+        if (!name || !email || !employeeId || (mode === 'add' && !password)) {
             toast({ variant: 'destructive', title: 'Error', description: 'Please fill out all required fields.' });
             return;
         }
@@ -90,8 +92,8 @@ function AddEditTeacherDialog({ mode, teacher, onTeacherUpdated }: { mode: 'add'
         const teacherData = { name, email, employeeId, phone, gender, status, role: 'teacher' as const };
         try {
             if (mode === 'add') {
-                await addTeacher(teacherData);
-                toast({ title: 'Success', description: 'Teacher added to the pool.' });
+                await addTeacher(teacherData, password);
+                toast({ title: 'Success', description: 'Teacher added and user account created.' });
             } else if (teacher) {
                 await updateTeacher(teacher.id, teacherData);
                 toast({ title: 'Success', description: 'Teacher details updated.' });
@@ -114,6 +116,7 @@ function AddEditTeacherDialog({ mode, teacher, onTeacherUpdated }: { mode: 'add'
             setPhone(teacher?.phone || '');
             setGender(teacher?.gender || '');
             setStatus(teacher?.status || 'Active');
+            setPassword('');
         }
     }, [open, teacher]);
 
@@ -147,9 +150,17 @@ function AddEditTeacherDialog({ mode, teacher, onTeacherUpdated }: { mode: 'add'
                                 <Input id="employeeId" value={employeeId} onChange={e => setEmployeeId(e.target.value)} />
                             </div>
                         </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="email">Email</Label>
-                            <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="email">Email</Label>
+                                <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} />
+                            </div>
+                            {mode === 'add' && (
+                                <div className="space-y-2">
+                                    <Label htmlFor="password">Password</Label>
+                                    <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} />
+                                </div>
+                            )}
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
