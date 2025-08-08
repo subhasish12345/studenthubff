@@ -16,7 +16,7 @@ import {
 import { auth, db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useToast } from './use-toast';
-import { doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 export type Role = 'student' | 'teacher' | 'admin';
 
@@ -85,19 +85,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }
 
   const logIn = async (email: string, password: string) => {
-    // Directly try to sign in. The onAuthStateChanged listener will handle role fetching.
-    // Firebase Auth will throw specific errors like 'auth/user-not-found' or 'auth/wrong-password'
-    // which are now handled in the LoginPage component.
     return signInWithEmailAndPassword(auth, email, password);
   }
   
   const logInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
-    const result = await signInWithPopup(auth, provider);
-    const user = result.user;
-    
-    // The onAuthStateChanged listener will check if the user is new and set their role.
-    return result;
+    return signInWithPopup(auth, provider);
   }
 
   const logOut = async () => {
@@ -126,5 +119,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-    

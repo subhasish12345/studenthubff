@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -20,8 +21,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Batch, addBatch, getBatchesForStream, deleteBatch } from '@/services/batches';
 import { Teacher, addTeacher, getTeachers, updateTeacher, deleteTeacher } from '@/services/teachers';
 import { useAuth } from '@/hooks/use-auth';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
 
 
 function DeleteTeacherDialog({ teacher, onTeacherDeleted }: { teacher: Teacher, onTeacherDeleted: () => void }) {
@@ -79,7 +78,7 @@ function AddEditTeacherDialog({ mode, teacher, onTeacherUpdated }: { mode: 'add'
     const [isLoading, setIsLoading] = useState(false);
     const [open, setOpen] = useState(false);
     const { toast } = useToast();
-    const { setRole } = useAuth();
+    const { signUp, setRole } = useAuth();
     
     const title = mode === 'add' ? 'Add New Teacher' : `Edit ${teacher?.name}`;
     const buttonText = mode === 'add' ? 'Add Teacher' : 'Save Changes';
@@ -94,9 +93,9 @@ function AddEditTeacherDialog({ mode, teacher, onTeacherUpdated }: { mode: 'add'
         const teacherData = { name, email, employeeId, phone, gender, status, role: 'teacher' as const };
         try {
             if (mode === 'add') {
-                const { user } = await createUserWithEmailAndPassword(auth, email, password);
-                await addTeacher(user.uid, teacherData);
+                const { user } = await signUp(email, password);
                 await setRole(user.uid, 'teacher');
+                await addTeacher(user.uid, teacherData);
                 toast({ title: 'Success', description: 'Teacher added and user account created.' });
             } else if (teacher) {
                 await updateTeacher(teacher.id, teacherData);
@@ -145,6 +144,7 @@ function AddEditTeacherDialog({ mode, teacher, onTeacherUpdated }: { mode: 'add'
                 <form onSubmit={handleSubmit}>
                     <DialogHeader>
                         <DialogTitle>{title}</DialogTitle>
+                         <CardDescription>Create a new teacher profile and their login credentials.</CardDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                         <div className="grid grid-cols-2 gap-4">
@@ -259,6 +259,7 @@ function AddDegreeDialog({ onDegreeAdded }: { onDegreeAdded: () => void }) {
                 <form onSubmit={handleSubmit}>
                     <DialogHeader>
                         <DialogTitle>Add New Degree</DialogTitle>
+                         <CardDescription>Define a new academic degree and its duration.</CardDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                         <div className="grid grid-cols-4 items-center gap-4">
@@ -340,6 +341,7 @@ function EditDegreeDialog({ degree, onDegreeUpdated }: { degree: Degree, onDegre
                 <form onSubmit={handleSubmit}>
                     <DialogHeader>
                         <DialogTitle>Edit Degree</DialogTitle>
+                        <CardDescription>Update the details for this degree.</CardDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                         <div className="grid grid-cols-4 items-center gap-4">
