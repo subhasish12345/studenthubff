@@ -104,9 +104,14 @@ function AddEditTeacherDialog({ mode, teacher, onTeacherUpdated }: { mode: 'add'
             onTeacherUpdated();
             setOpen(false);
         } catch (error) {
-            let errorMessage = error instanceof Error ? error.message : `An unknown error occurred.`;
-            if (errorMessage.includes('auth/email-already-in-use')) {
-                errorMessage = 'A user with this email already exists.';
+            let errorMessage = "An unknown error occurred.";
+            if (error instanceof Error) {
+                 // Check for specific Firebase Auth error codes
+                if ((error as any).code === 'auth/email-already-in-use') {
+                    errorMessage = 'A user with this email already exists.';
+                } else {
+                    errorMessage = error.message;
+                }
             }
             toast({ variant: 'destructive', title: 'Error', description: errorMessage });
         } finally {
@@ -144,7 +149,7 @@ function AddEditTeacherDialog({ mode, teacher, onTeacherUpdated }: { mode: 'add'
                 <form onSubmit={handleSubmit}>
                     <DialogHeader>
                         <DialogTitle>{title}</DialogTitle>
-                         <CardDescription>Create a new teacher profile and their login credentials.</CardDescription>
+                         <DialogDescription>Create a new teacher profile and their login credentials.</DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                         <div className="grid grid-cols-2 gap-4">
