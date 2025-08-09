@@ -1,6 +1,6 @@
 
 import { db } from '@/lib/firebase';
-import { collection, getDocs, doc, setDoc, query, orderBy, updateDoc, Timestamp, getDoc, deleteDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, query, orderBy, updateDoc, Timestamp } from 'firebase/firestore';
 
 const COLLEGE_ID = 'GEC';
 
@@ -25,36 +25,40 @@ export interface Teacher {
   role: 'teacher';
 }
 
-type TeacherFirestoreData = Omit<Teacher, 'id' | 'joiningDate' | 'email' | 'role'> & {
+// Data for Firestore (omits id, converts date)
+type TeacherFirestoreData = Omit<Teacher, 'id' | 'joiningDate' | 'role'> & {
     joiningDate: Timestamp;
 };
 
-
-// Function to add a new teacher's profile to the central pool.
-// User account should be created separately.
-export const addTeacher = async (uid: string, teacherData: Omit<Teacher, 'id' | 'email' | 'role'>) => {
+/**
+ * Adds a new teacher's profile to the Firestore database.
+ * This function should be called AFTER the user has been created in Firebase Auth
+ * and their role has been set in the 'users' collection.
+ * @param uid The user's UID from Firebase Auth.
+ * @param teacherData The teacher's profile data.
+ */
+export const addTeacher = async (uid: string, teacherData: Omit<Teacher, 'id' | 'role' | 'assignedClasses'>) => {
   try {
     if (!uid) {
       throw new Error("User ID is required to add a teacher profile.");
     }
-    const userDoc = await getDoc(doc(db, 'users', uid));
-    const userEmail = userDoc.data()?.email;
-
-    if(!userEmail) {
-        throw new Error("Could not find user email for the given UID.");
-    }
 
     const teacherRef = doc(db, 'colleges', COLLEGE_ID, 'teachers', uid);
 
-    const firestoreData = {
-        ...teacherData,
-        email: userEmail,
-        joiningDate: Timestamp.fromMillis(teacherData.joiningDate),
-        role: 'teacher',
-        assignedClasses: [],
+    const firestoreData: Omit<Teacher, 'id'> = {
+      ...teacherData,
+      joiningDate: new Date(teacherData.joiningDate).getTime(),
+      role: 'teacher',
+      assignedClasses: [],
+    };
+    
+    // Convert joiningDate to Firestore Timestamp for storing
+    const dataToSet = {
+        ...firestoreData,
+        joiningDate: Timestamp.fromMillis(firestoreData.joiningDate),
     };
 
-    await setDoc(teacherRef, firestoreData);
+    await setDoc(teacherRef, dataToSet);
     return uid;
   } catch (e) {
     console.error("Error adding teacher profile: ", e);
@@ -101,3 +105,5 @@ export const updateTeacher = async (teacherId: string, data: Partial<Omit<Teache
         throw new Error('Failed to update teacher details');
     }
 }
+
+    

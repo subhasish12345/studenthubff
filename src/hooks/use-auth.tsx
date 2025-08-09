@@ -44,6 +44,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setLoading(true);
       if (user) {
         setUser(user);
         const userDocRef = doc(db, 'users', user.uid);
@@ -57,7 +58,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } else if (userDoc.exists()) {
           setRole(userDoc.data().role);
         } else {
-          // If user doc doesn't exist for a non-admin, default to student
+          // This case handles Google sign-in for the first time or if the doc was deleted.
           const defaultRole = 'student';
           setRole(defaultRole);
           await setRoleInFirestore(user.uid, defaultRole, user.email || undefined);
@@ -73,11 +74,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   
   const setRoleInFirestore = async (uid: string, role: Role, email?: string) => {
       try {
-          const dataToSet: { role: Role; email?: string } = { role };
+          const userRef = doc(db, 'users', uid);
+          const dataToSet: { role: Role; email?: string, uid: string } = { role, uid };
           if (email) {
               dataToSet.email = email;
           }
-          await setDoc(doc(db, 'users', uid), dataToSet, { merge: true });
+          await setDoc(userRef, dataToSet, { merge: true });
       } catch (error) {
           console.error("Error setting user role:", error);
           toast({ variant: 'destructive', title: 'Error', description: 'Could not set user role.' });
@@ -88,6 +90,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signUp = async (email: string, password: string) => {
     await setPersistence(auth, browserLocalPersistence);
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    // Note: Role is set via the form handleSubmit now, not automatically on signup
     return userCredential;
   }
 
@@ -126,3 +129,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+    

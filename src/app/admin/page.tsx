@@ -74,25 +74,28 @@ function AddEditTeacherDialog({ mode, teacher, onTeacherUpdated }: { mode: 'add'
 
         try {
             if (mode === 'add') {
+                // Step 1: Create the user in Firebase Auth
                 const userCredential = await signUp(email, password);
                 const uid = userCredential.user.uid;
                 
+                // Step 2: Set the user's role in the 'users' collection
                 await setRole(uid, 'teacher', email);
                 
-                const teacherData = { 
+                // Step 3: Add the detailed teacher profile to the 'teachers' collection
+                const teacherProfileData = { 
                     name,
                     employeeId, 
                     phone, 
                     department, 
                     specialization,
                     joiningDate: new Date(joiningDate).getTime(),
-                    assignedClasses: [],
                 };
 
-                await addTeacher(uid, teacherData);
+                await addTeacher(uid, teacherProfileData);
                 toast({ title: 'Success', description: 'Teacher added and user account created.' });
+
             } else if (teacher) {
-                 const teacherData = { 
+                 const teacherUpdateData = { 
                     name,
                     employeeId, 
                     phone, 
@@ -100,16 +103,16 @@ function AddEditTeacherDialog({ mode, teacher, onTeacherUpdated }: { mode: 'add'
                     specialization,
                     joiningDate: new Date(joiningDate).getTime(),
                 };
-                await updateTeacher(teacher.id, teacherData);
+                await updateTeacher(teacher.id, teacherUpdateData);
                 toast({ title: 'Success', description: 'Teacher details updated.' });
             }
-            onTeacherUpdated();
+            onTeacherUpdated(); // This refreshes the teacher list
             setOpen(false);
         } catch (error) {
             let errorMessage = "An unknown error occurred.";
             if (error instanceof Error) {
                  if ((error as any).code === 'auth/email-already-in-use') {
-                    errorMessage = 'A user with this email already exists.';
+                    errorMessage = 'This email is already in use. Please use a different email or check if the teacher already exists.';
                 } else {
                     errorMessage = error.message;
                 }
@@ -969,3 +972,5 @@ export default function AdminPage() {
         </div>
     );
 }
+
+    

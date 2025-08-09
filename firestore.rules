@@ -1,32 +1,41 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
+    
+    // Helper functions to check user roles
     function isAdmin() {
-      // Check if the user is authenticated and has the 'admin' role in their user document.
+      // Check if the user is authenticated and their role in the 'users' collection is 'admin'.
       return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // Rules for the users collection
+    function isTeacher() {
+      // Check if the user is authenticated and their role is 'teacher'.
+      return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher';
+    }
+
+    // Rules for the 'users' collection where roles are stored
     match /users/{userId} {
-      // Allow users to read their own document. Admins can read any user document.
+      // Allow users to read their own user document.
+      // Allow admins to read any user document.
       allow read: if request.auth.uid == userId || isAdmin();
-      // Allow users to create their own document (on signup). Admins can write to any user document.
+      
+      // Allow users to create their own user document upon signup.
+      // Allow admins to write to any user document (e.g., to assign roles).
       allow write: if request.auth.uid == userId || isAdmin();
     }
 
-    // Rules for all collections under a specific college
+    // Rules for all documents within a specific college
     match /colleges/{collegeId}/{document=**} {
-        // Allow any authenticated user to read data (e.g., degrees, events, notices).
-        allow read: if request.auth != null;
-        // Allow only admins to write data (e.g., create degrees, add employees).
-        allow write: if isAdmin();
-    }
-
-    // Default catch-all to deny all other reads/writes for security.
-    match /{path=**} {
-      allow read, write: if false;
+      // Allow any authenticated user to read data (e.g., students reading notices, teachers reading their assignments).
+      allow read: if request.auth != null;
+      
+      // ONLY allow users with the 'admin' role to write (create, update, delete) data.
+      // This is the master rule for all admin-managed collections like degrees, teachers, employees, etc.
+      allow write: if isAdmin();
     }
   }
 }
+
+    
