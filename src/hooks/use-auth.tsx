@@ -56,6 +56,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               setRole('admin');
            } else {
               // This case handles Google Sign-in for the first time for a non-admin
+              // Or other manual signups that aren't admin-created
               await setRoleInFirestore(user.uid, 'student');
               setRole('student');
            }
@@ -81,7 +82,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signUp = async (email: string, password: string) => {
     await setPersistence(auth, browserLocalPersistence);
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    // onAuthStateChanged will handle setting the role in firestore
+    // onAuthStateChanged will handle setting the role in firestore for new student/google signups
+    // For admin-created users (like teachers), the role is set manually in the creation dialog.
     return userCredential;
   }
 
