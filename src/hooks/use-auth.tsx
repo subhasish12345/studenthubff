@@ -44,16 +44,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setLoading(true);
       if (user) {
         setUser(user);
-        const userRoleDoc = await getDoc(doc(db, 'users', user.uid));
-        if (userRoleDoc.exists()) {
-          setRole(userRoleDoc.data().role);
+        const userDocRef = doc(db, 'users', user.uid);
+        const userDoc = await getDoc(userDocRef);
+
+        if (user.email === ADMIN_EMAIL) {
+          setRole('admin');
+           if (!userDoc.exists()) {
+            await setRoleInFirestore(user.uid, 'admin', user.email);
+          }
+        } else if (userDoc.exists()) {
+          setRole(userDoc.data().role);
         } else {
-            const initialRole = user.email === ADMIN_EMAIL ? 'admin' : 'student';
-            await setRoleInFirestore(user.uid, initialRole, user.email || undefined);
-            setRole(initialRole);
+          // If user doc doesn't exist for a non-admin, default to student
+          const defaultRole = 'student';
+          setRole(defaultRole);
+          await setRoleInFirestore(user.uid, defaultRole, user.email || undefined);
         }
       } else {
         setUser(null);
