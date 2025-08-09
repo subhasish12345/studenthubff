@@ -7,15 +7,58 @@ service cloud.firestore {
       return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // Users can manage their own user document, admins can manage any.
     match /users/{userId} {
       allow read, write: if request.auth.uid == userId || isAdmin();
     }
 
-    // Admins can manage all college data. Other authenticated users can read it.
-    match /colleges/{collegeId}/{document=**} {
+    match /colleges/{collegeId}/teachers/{teacherId} {
       allow read: if request.auth != null;
       allow write: if isAdmin();
+    }
+
+    match /colleges/{collegeId}/degrees/{degreeId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
+    
+    match /colleges/{collegeId}/streams/{streamId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
+
+    match /colleges/{collegeId}/batches/{batchId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
+    
+    match /colleges/{collegeId}/employees/{employeeId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
+
+    match /colleges/{collegeId}/departments/{departmentId} {
+        allow read: if request.auth != null;
+        allow write: if isAdmin();
+    }
+    
+    match /colleges/{collegeId}/designations/{designationId} {
+        allow read: if request.auth != null;
+        allow write: if isAdmin();
+    }
+
+    match /colleges/{collegeId}/events/{eventId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
+
+    match /colleges/{collegeId}/notices/{noticeId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
+
+    // Fallback for any other collections inside a college
+    match /colleges/{collegeId}/{document=**} {
+      allow read, write: if isAdmin();
     }
   }
 }
