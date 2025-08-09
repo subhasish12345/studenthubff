@@ -60,16 +60,3 @@ export const updateTeacher = async (teacherId: string, data: Partial<Omit<Teache
         throw new Error('Failed to update teacher details');
     }
 }
-
-// Function to delete a teacher from the central pool
-export const deleteTeacher = async (teacherId: string) => {
-    // This function should also delete the auth user.
-    // For now, it just deletes the firestore doc.
-    try {
-        const teacherRef = doc(db, 'colleges', COLLEGE_ID, 'teachers', teacherId);
-        await deleteDoc(teacherRef);
-    } catch(e) {
-        console.error("Error deleting teacher: ", e);
-        throw new Error('Failed to delete teacher');
-    }
-}

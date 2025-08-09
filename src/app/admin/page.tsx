@@ -19,53 +19,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { createDegreeStructure } from '@/services/setup-collections';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Batch, addBatch, getBatchesForStream, deleteBatch } from '@/services/batches';
-import { Teacher, addTeacher, getTeachers, updateTeacher, deleteTeacher } from '@/services/teachers';
+import { Teacher, addTeacher, getTeachers, updateTeacher } from '@/services/teachers';
 import { useAuth } from '@/hooks/use-auth';
-
-
-function DeleteTeacherDialog({ teacher, onTeacherDeleted }: { teacher: Teacher, onTeacherDeleted: () => void }) {
-    const [isLoading, setIsLoading] = useState(false);
-    const { toast } = useToast();
-
-    const handleDelete = async () => {
-        setIsLoading(true);
-        try {
-            await deleteTeacher(teacher.id);
-            toast({ title: "Success", description: "Teacher removed successfully." });
-            onTeacherDeleted();
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-            toast({ variant: "destructive", title: "Error", description: `Failed to remove teacher: ${errorMessage}` });
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    return (
-        <AlertDialog>
-            <AlertDialogTrigger asChild>
-                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
-                    <Trash2 className="mr-2 h-4 w-4" /> Delete Teacher
-                </DropdownMenuItem>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        This will permanently remove {teacher.name} from the teacher pool. This action cannot be undone.
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDelete} disabled={isLoading} className="bg-destructive hover:bg-destructive/90">
-                        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Yes, delete
-                    </AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
-    );
-}
 
 function AddEditTeacherDialog({ mode, teacher, onTeacherUpdated }: { mode: 'add' | 'edit', teacher?: Teacher, onTeacherUpdated: () => void }) {
     const [name, setName] = useState(teacher?.name || '');
@@ -976,7 +931,6 @@ export default function AdminPage() {
                                                         </DropdownMenuTrigger>
                                                         <DropdownMenuContent align="end">
                                                             <AddEditTeacherDialog mode="edit" teacher={teacher} onTeacherUpdated={fetchTeachers} />
-                                                            <DeleteTeacherDialog teacher={teacher} onTeacherDeleted={fetchTeachers} />
                                                         </DropdownMenuContent>
                                                     </DropdownMenu>
                                                 </TableCell>
@@ -1034,3 +988,5 @@ export default function AdminPage() {
         </div>
     );
 }
+
+    
