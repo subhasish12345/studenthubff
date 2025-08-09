@@ -1,12 +1,12 @@
 
 import { db } from '@/lib/firebase';
-import { collection, getDocs, doc, setDoc, query, orderBy, updateDoc, Timestamp } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, query, orderBy, updateDoc, Timestamp, getDoc } from 'firebase/firestore';
 
 const COLLEGE_ID = 'GEC';
 
 // Structure of a Teacher object
 export interface Teacher {
-  id: string;
+  id: string; // This will be the UID from Firebase Auth
   name: string;
   email: string;
   employeeId: string;
@@ -25,10 +25,6 @@ export interface Teacher {
   role: 'teacher';
 }
 
-// Data for Firestore (omits id, converts date)
-type TeacherFirestoreData = Omit<Teacher, 'id' | 'joiningDate' | 'role'> & {
-    joiningDate: Timestamp;
-};
 
 /**
  * Adds a new teacher's profile to the Firestore database.
@@ -36,8 +32,9 @@ type TeacherFirestoreData = Omit<Teacher, 'id' | 'joiningDate' | 'role'> & {
  * and their role has been set in the 'users' collection.
  * @param uid The user's UID from Firebase Auth.
  * @param teacherData The teacher's profile data.
+ * @param email The user's email address.
  */
-export const addTeacher = async (uid: string, teacherData: Omit<Teacher, 'id' | 'role' | 'assignedClasses'>) => {
+export const addTeacher = async (uid: string, teacherData: Omit<Teacher, 'id' | 'email' | 'role' | 'assignedClasses'>, email: string) => {
   try {
     if (!uid) {
       throw new Error("User ID is required to add a teacher profile.");
@@ -45,20 +42,15 @@ export const addTeacher = async (uid: string, teacherData: Omit<Teacher, 'id' | 
 
     const teacherRef = doc(db, 'colleges', COLLEGE_ID, 'teachers', uid);
 
-    const firestoreData: Omit<Teacher, 'id'> = {
+    const firestoreData = {
       ...teacherData,
-      joiningDate: new Date(teacherData.joiningDate).getTime(),
-      role: 'teacher',
+      email: email, // Use the email passed from the auth creation
+      joiningDate: Timestamp.fromMillis(teacherData.joiningDate),
+      role: 'teacher' as const,
       assignedClasses: [],
     };
-    
-    // Convert joiningDate to Firestore Timestamp for storing
-    const dataToSet = {
-        ...firestoreData,
-        joiningDate: Timestamp.fromMillis(firestoreData.joiningDate),
-    };
 
-    await setDoc(teacherRef, dataToSet);
+    await setDoc(teacherRef, firestoreData);
     return uid;
   } catch (e) {
     console.error("Error adding teacher profile: ", e);
@@ -66,6 +58,7 @@ export const addTeacher = async (uid: string, teacherData: Omit<Teacher, 'id' | 
     throw new Error(errorMessage);
   }
 };
+
 
 // Function to get all teachers from the central pool
 export const getTeachers = async (): Promise<Teacher[]> => {
@@ -105,5 +98,3 @@ export const updateTeacher = async (teacherId: string, data: Partial<Omit<Teache
         throw new Error('Failed to update teacher details');
     }
 }
-
-    

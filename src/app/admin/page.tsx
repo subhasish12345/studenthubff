@@ -91,7 +91,7 @@ function AddEditTeacherDialog({ mode, teacher, onTeacherUpdated }: { mode: 'add'
                     joiningDate: new Date(joiningDate).getTime(),
                 };
 
-                await addTeacher(uid, teacherProfileData);
+                await addTeacher(uid, teacherProfileData, email);
                 toast({ title: 'Success', description: 'Teacher added and user account created.' });
 
             } else if (teacher) {
@@ -758,7 +758,7 @@ export default function AdminPage() {
         }
     };
     
-    const fetchTeachers = async () => {
+    const fetchTeachers = React.useCallback(async () => {
         setIsLoadingTeachers(true);
         try {
             const teachersData = await getTeachers();
@@ -768,12 +768,12 @@ export default function AdminPage() {
         } finally {
             setIsLoadingTeachers(false);
         }
-    }
+    }, [toast]);
 
     useEffect(() => {
         fetchDegrees();
         fetchTeachers();
-    }, []);
+    }, [fetchTeachers]);
 
     const handleManageStreams = (degree: Degree) => {
         setSelectedDegree(degree);
@@ -972,5 +972,3 @@ export default function AdminPage() {
         </div>
     );
 }
-
-    
