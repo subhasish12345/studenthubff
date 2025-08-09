@@ -32,24 +32,34 @@ type TeacherFirestoreData = Omit<Teacher, 'id' | 'joiningDate'> & {
 
 // Function to add a new teacher's profile to the central pool.
 // User account should be created separately.
-export const addTeacher = async (uid: string, teacherData: Omit<Teacher, 'id'>) => {
+export const addTeacher = async (uid: string, teacherData: Omit<Teacher, 'id' | 'email' | 'role'>) => {
   try {
     if (!uid) {
       throw new Error("User ID is required to add a teacher profile.");
     }
-    // Teacher profile in central pool, using UID as document ID
+    const userDoc = await getDoc(doc(db, 'users', uid));
+    const userEmail = userDoc.data()?.email;
+
+    if(!userEmail) {
+        throw new Error("Could not find user email for the given UID.");
+    }
+
     const teacherRef = doc(db, 'colleges', COLLEGE_ID, 'teachers', uid);
 
-    const firestoreData: TeacherFirestoreData = {
+    const firestoreData: Omit<TeacherFirestoreData, 'role'> & { email: string; role: 'teacher' } = {
         ...teacherData,
+        email: userEmail,
         joiningDate: Timestamp.fromMillis(teacherData.joiningDate),
+        role: 'teacher',
+        assignedClasses: [],
     };
 
     await setDoc(teacherRef, firestoreData);
     return uid;
   } catch (e) {
     console.error("Error adding teacher profile: ", e);
-    throw new Error('Failed to add teacher profile to the database.');
+    const errorMessage = e instanceof Error ? e.message : 'Failed to add teacher profile to the database.';
+    throw new Error(errorMessage);
   }
 };
 
@@ -65,7 +75,7 @@ export const getTeachers = async (): Promise<Teacher[]> => {
       teachers.push({ 
         id: doc.id,
         ...data,
-        joiningDate: data.joiningDate.toMillis()
+        joiningDate: data.joiningDate?.toMillis() || 0
       } as Teacher);
     });
     return teachers;
@@ -76,7 +86,7 @@ export const getTeachers = async (): Promise<Teacher[]> => {
 };
 
 // Function to update an existing teacher's details
-export const updateTeacher = async (teacherId: string, data: Partial<Omit<Teacher, 'id' | 'role'>>) => {
+export const updateTeacher = async (teacherId: string, data: Partial<Omit<Teacher, 'id' | 'role' | 'email'>>) => {
     try {
         const teacherRef = doc(db, 'colleges', COLLEGE_ID, 'teachers', teacherId);
         

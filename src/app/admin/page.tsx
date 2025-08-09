@@ -28,7 +28,6 @@ function AddEditTeacherDialog({ mode, teacher, onTeacherUpdated }: { mode: 'add'
     const { toast } = useToast();
     const { signUp, setRole } = useAuth();
     
-    // Form state
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -75,25 +74,21 @@ function AddEditTeacherDialog({ mode, teacher, onTeacherUpdated }: { mode: 'add'
 
         try {
             if (mode === 'add') {
-                const { user } = await signUp(email, password);
-                await setRole(user.uid, 'teacher');
+                const userCredential = await signUp(email, password);
+                await setRole(userCredential.user.uid, 'teacher', email);
                 const teacherData = { 
-                    name, 
-                    email, 
+                    name,
                     employeeId, 
                     phone, 
                     department, 
                     specialization,
                     joiningDate: new Date(joiningDate).getTime(),
-                    assignedClasses: [],
-                    role: 'teacher' as const
                 };
-                await addTeacher(user.uid, teacherData);
+                await addTeacher(userCredential.user.uid, teacherData);
                 toast({ title: 'Success', description: 'Teacher added and user account created.' });
             } else if (teacher) {
                  const teacherData = { 
-                    name, 
-                    email, 
+                    name,
                     employeeId, 
                     phone, 
                     department, 

@@ -28,7 +28,7 @@ interface AuthContextType {
   logIn: (email: string, password: string) => Promise<any>;
   logInWithGoogle: () => Promise<any>;
   logOut: () => Promise<any>;
-  setRole: (uid: string, role: Role) => Promise<void>;
+  setRole: (uid: string, role: Role, email?: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -51,15 +51,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (userRoleDoc.exists()) {
           setRole(userRoleDoc.data().role);
         } else {
-           if (user.email === ADMIN_EMAIL) {
-              await setRoleInFirestore(user.uid, 'admin');
-              setRole('admin');
-           } else {
-              // This case handles Google Sign-in for the first time for a non-admin
-              // Or other manual signups that aren't admin-created
-              await setRoleInFirestore(user.uid, 'student');
-              setRole('student');
-           }
+           // This handles first-time sign-ins where role is not yet set
+           // The role is usually set explicitly right after account creation.
+           // Defaulting to student as a fallback.
+            const initialRole = user.email === ADMIN_EMAIL ? 'admin' : 'student';
+            await setRoleInFirestore(user.uid, initialRole, user.email || undefined);
+            setRole(initialRole);
         }
       } else {
         setUser(null);
@@ -70,20 +67,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => unsubscribe();
   }, []);
   
-  const setRoleInFirestore = async (uid: string, role: Role) => {
+  const setRoleInFirestore = async (uid: string, role: Role, email?: string) => {
       try {
-          await setDoc(doc(db, 'users', uid), { role }, { merge: true });
+          const dataToSet: { role: Role; email?: string } = { role };
+          if (email) {
+              dataToSet.email = email;
+          }
+          await setDoc(doc(db, 'users', uid), dataToSet, { merge: true });
       } catch (error) {
           console.error("Error setting user role:", error);
           toast({ variant: 'destructive', title: 'Error', description: 'Could not set user role.' });
+          throw error; // Re-throw to be caught by the calling function
       }
   };
 
   const signUp = async (email: string, password: string) => {
     await setPersistence(auth, browserLocalPersistence);
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    // onAuthStateChanged will handle setting the role in firestore for new student/google signups
-    // For admin-created users (like teachers), the role is set manually in the creation dialog.
+    // Role is set explicitly by the function that calls signUp (e.g., in AddEditTeacherDialog)
     return userCredential;
   }
 

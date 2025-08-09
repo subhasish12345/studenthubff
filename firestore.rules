@@ -4,38 +4,22 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Helper Functions
-    function isSignedIn() {
-      return request.auth != null;
-    }
-    
-    function isUser(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
     function isAdmin() {
-      // Check if the user has an 'admin' role in their user document
-      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-    }
-    
-    function isTeacher() {
-      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher';
+      return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // Rules for the 'users' collection
+    // Users collection can be read by any authenticated user, but only written by the user themselves or an admin.
+    // This allows a user to have their role set upon creation.
     match /users/{userId} {
-      // Users can read their own data. Admins can read anyone's data.
-      allow read: if isUser(userId) || isAdmin();
-      // A user can create their own user document. Admins can write to any user document.
-      allow write: if isUser(userId) || isAdmin();
+      allow read: if request.auth != null;
+      allow write: if request.auth.uid == userId || isAdmin();
     }
-    
-    // Rules for all collections under a specific college
+
+    // All collections under a specific college can be written to by an admin.
+    // All authenticated users can read this data.
     match /colleges/{collegeId}/{document=**} {
-        // Any authenticated user can read data (e.g., events, notices, degree lists)
-        allow read: if isSignedIn();
-        // Only admins can write/create/delete documents like degrees, streams, teachers, etc.
-        allow write: if isAdmin();
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
     }
   }
 }
