@@ -1,32 +1,76 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions to check user roles
+    // Helper Functions
     function isAdmin() {
       return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // Rules for the users collection
+    // Rules for user roles
     match /users/{userId} {
-      // Any authenticated user can create their OWN user document.
-      // An admin can read or write to any user document.
-      allow read, write: if request.auth.uid == userId || isAdmin();
+      // Admins can manage any user document.
+      // A user can create their own document upon sign-up.
+      allow read, write: if isAdmin() || request.auth.uid == userId;
+    }
+
+    // Rules for all data within a specific college
+    match /colleges/{collegeId}/{document=**} {
+      // By default, deny all access. Specific rules below will grant access.
+      allow read, write: if false;
+    }
+
+    // Granular rules for each collection within a college.
+
+    // Teachers can be read by anyone logged in, but only written by admins.
+    match /colleges/{collegeId}/teachers/{teacherId} {
+        allow read: if request.auth != null;
+        allow write: if isAdmin();
     }
     
-    // Rules for all collections under a specific college
-    match /colleges/{collegeId}/{document=**} {
-      // Admins have full read/write access to everything.
-      // Any authenticated user can read the data.
+    // Employees can be read by anyone logged in, but only written by admins.
+     match /colleges/{collegeId}/employees/{employeeId} {
+        allow read: if request.auth != null;
+        allow write: if isAdmin();
+    }
+    
+    // Departments can be read by anyone logged in, but only written by admins.
+    match /colleges/{collegeId}/departments/{departmentId} {
+        allow read: if request.auth != null;
+        allow write: if isAdmin();
+    }
+
+    // Designations can be read by anyone logged in, but only written by admins.
+     match /colleges/{collegeId}/designations/{designationId} {
+        allow read: if request.auth != null;
+        allow write: if isAdmin();
+    }
+
+    // Events can be read by anyone logged in, but only written by admins.
+    match /colleges/{collegeId}/events/{eventId} {
+        allow read: if request.auth != null;
+        allow write: if isAdmin();
+    }
+    
+    // Notices can be read by anyone logged in, but only written by admins.
+    match /colleges/{collegeId}/notices/{noticeId} {
+        allow read: if request.auth != null;
+        allow write: if isAdmin();
+    }
+
+    // Degrees, Streams, and Batches can be read by anyone, but written only by Admin
+    match /colleges/{collegeId}/degrees/{degreeId} {
       allow read: if request.auth != null;
       allow write: if isAdmin();
     }
-    
-    // Default deny all other access
-    match /{path=**}/documents/{document} {
-      allow read, write: if false;
+    match /colleges/{collegeId}/degrees/{degreeId}/streams/{streamId} {
+       allow read: if request.auth != null;
+       allow write: if isAdmin();
+    }
+     match /colleges/{collegeId}/degrees/{degreeId}/streams/{streamId}/batches/{batchId}/{document=**} {
+       allow read: if request.auth != null;
+       allow write: if isAdmin();
     }
   }
 }
