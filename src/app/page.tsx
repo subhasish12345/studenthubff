@@ -44,19 +44,29 @@ import {
   Book,
   FileUp,
   GitPullRequest,
-  Briefcase
+  Briefcase,
+  Loader2
 } from "lucide-react";
 import { getTeachers } from "@/services/teachers";
 import { getDegrees } from "@/services/degrees";
 import { getEmployees } from "@/services/employees";
 
 const AdminDashboard = () => {
+    const { user, loading: authLoading } = useAuth();
     const [totalTeachers, setTotalTeachers] = useState(0);
     const [totalDegrees, setTotalDegrees] = useState(0);
     const [totalEmployees, setTotalEmployees] = useState(0);
+    const [isLoadingStats, setIsLoadingStats] = useState(true);
 
     useEffect(() => {
+        if (authLoading) return; // Wait until auth state is confirmed
+        if (!user) { // If no user, no need to fetch
+            setIsLoadingStats(false);
+            return;
+        }
+
         const fetchStats = async () => {
+            setIsLoadingStats(true);
             try {
                 const teachers = await getTeachers();
                 setTotalTeachers(teachers.length);
@@ -69,10 +79,20 @@ const AdminDashboard = () => {
 
             } catch (error) {
                 console.error("Failed to fetch admin stats:", error);
+            } finally {
+                setIsLoadingStats(false);
             }
         };
         fetchStats();
-    }, []);
+    }, [user, authLoading]);
+
+    if (isLoadingStats || authLoading) {
+      return (
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      )
+    }
 
 
     return (
