@@ -2,29 +2,29 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
+
+    // Helper function to check if the requesting user is an admin.
+    // It checks for the existence of the user's document in the 'users' collection
+    // and verifies that their 'role' field is set to 'admin'.
     function isAdmin() {
       return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
+    // Rules for the 'users' collection where user roles are stored.
     match /users/{userId} {
-      allow read: if request.auth.uid == userId || isAdmin();
-      allow write: if request.auth.uid == userId || isAdmin();
+      // A user can create their own user document (e.g., on first sign-up).
+      // An admin can read or write to any user document.
+      allow read, write: if request.auth.uid == userId || isAdmin();
     }
-
-    // Grant access to the college data
+    
+    // Rules for all documents within a specific college.
     match /colleges/{collegeId}/{document=**} {
-        // Admins can read and write anything in the college data
+        // Admins have full read and write access to everything.
+        // Any authenticated user can read any document. This is a broad rule
+        // that simplifies development but might be refined later for more granular security.
         allow read, write: if isAdmin();
-
-        // Any authenticated user can read from specific public collections
-        allow read: if request.auth != null && (
-          document == 'events' ||
-          document == 'notices' ||
-          document == 'degrees' ||
-          document == 'streams'
-        );
+        allow read: if request.auth != null;
     }
   }
 }
