@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { PlusCircle, MoreHorizontal, Loader2, Edit, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
@@ -106,8 +106,7 @@ function AddEditTeacherDialog({ mode, teacher, onTeacherUpdated }: { mode: 'add'
         } catch (error) {
             let errorMessage = "An unknown error occurred.";
             if (error instanceof Error) {
-                 // Check for specific Firebase Auth error codes
-                if ((error as any).code === 'auth/email-already-in-use') {
+                 if ((error as any).code === 'auth/email-already-in-use') {
                     errorMessage = 'A user with this email already exists.';
                 } else {
                     errorMessage = error.message;
@@ -264,7 +263,7 @@ function AddDegreeDialog({ onDegreeAdded }: { onDegreeAdded: () => void }) {
                 <form onSubmit={handleSubmit}>
                     <DialogHeader>
                         <DialogTitle>Add New Degree</DialogTitle>
-                         <CardDescription>Define a new academic degree and its duration.</CardDescription>
+                         <DialogDescription>Define a new academic degree and its duration.</DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                         <div className="grid grid-cols-4 items-center gap-4">
@@ -346,7 +345,7 @@ function EditDegreeDialog({ degree, onDegreeUpdated }: { degree: Degree, onDegre
                 <form onSubmit={handleSubmit}>
                     <DialogHeader>
                         <DialogTitle>Edit Degree</DialogTitle>
-                        <CardDescription>Update the details for this degree.</CardDescription>
+                        <DialogDescription>Update the details for this degree.</DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                         <div className="grid grid-cols-4 items-center gap-4">
@@ -576,7 +575,7 @@ function ManageBatchesDialog({
             <DialogContent className="sm:max-w-[800px]">
                 <DialogHeader>
                     <DialogTitle>Manage Batches for {degree.name} - {stream.name}</DialogTitle>
-                    <CardDescription>Create new batches and manage existing ones for this stream.</CardDescription>
+                    <DialogDescription>Create new batches and manage existing ones for this stream.</DialogDescription>
                 </DialogHeader>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-4">
@@ -730,7 +729,7 @@ function ManageStreamsDialog({
             <DialogContent>
                  <DialogHeader>
                     <DialogTitle>Manage Streams for {degree.name}</DialogTitle>
-                    <CardDescription>Add or view streams for this degree.</CardDescription>
+                    <DialogDescription>Add or view streams for this degree.</DialogDescription>
                 </DialogHeader>
                 <div className="py-4">
                     <form onSubmit={handleSubmit} className="flex gap-2">
