@@ -3,28 +3,42 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function to check if the requesting user is an admin.
-    // It checks for the existence of the user's document in the 'users' collection
-    // and verifies that their 'role' field is set to 'admin'.
-    function isAdmin() {
-      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    // Helper functions to check user roles
+    function isSignedIn() {
+      return request.auth != null;
     }
 
-    // Rules for the 'users' collection where user roles are stored.
-    match /users/{userId} {
-      // A user can create their own user document (e.g., on first sign-up).
-      // An admin can read or write to any user document.
-      allow read, write: if request.auth.uid == userId || isAdmin();
+    function isAdmin() {
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
     
-    // Rules for all documents within a specific college.
+    function isTeacher() {
+        return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher';
+    }
+    
+    function isStudent() {
+        return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'student';
+    }
+
+    // Rules for the 'users' collection
+    match /users/{userId} {
+      // An admin can do anything. A user can create their own user document, and read any user document.
+      allow read: if isSignedIn();
+      allow create: if request.auth.uid == userId;
+      allow update, delete: if isAdmin();
+    }
+
+    // Rules for all collections under a specific college
     match /colleges/{collegeId}/{document=**} {
-        // Admins have full read and write access to everything.
-        // Any authenticated user can read any document. This is a broad rule
-        // that simplifies development but might be refined later for more granular security.
-        allow read, write: if isAdmin();
-        allow read: if request.auth != null;
+        // Admins have full read/write access to everything.
+        // Any authenticated user (student, teacher) can read documents.
+        allow read: if isSignedIn();
+        allow write: if isAdmin();
+    }
+    
+    // Default deny all other reads/writes
+    match /{path=**}/documents/{document} {
+        allow read, write: if false;
     }
   }
 }
