@@ -1,24 +1,41 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    
+    // Helper Functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isUser(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
 
-    // Helper function to check for admin role
     function isAdmin() {
-      return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      // Check if the user has an 'admin' role in their user document
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    function isTeacher() {
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher';
     }
 
-    // Users can read/write their own user info document. Admins can do anything.
+    // Rules for the 'users' collection
     match /users/{userId} {
-      allow read, write: if request.auth.uid == userId || isAdmin();
+      // Users can read their own data. Admins can read anyone's data.
+      allow read: if isUser(userId) || isAdmin();
+      // A user can create their own user document. Admins can write to any user document.
+      allow write: if isUser(userId) || isAdmin();
     }
-
-    // Rules for all documents within a college
+    
+    // Rules for all collections under a specific college
     match /colleges/{collegeId}/{document=**} {
-      // Any authenticated user can read data (e.g., see lists of teachers, events)
-      allow read: if request.auth != null;
-      // ONLY admins can write (create, update, delete)
-      allow write: if isAdmin();
+        // Any authenticated user can read data (e.g., events, notices, degree lists)
+        allow read: if isSignedIn();
+        // Only admins can write/create/delete documents like degrees, streams, teachers, etc.
+        allow write: if isAdmin();
     }
   }
 }

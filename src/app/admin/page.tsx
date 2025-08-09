@@ -23,36 +23,83 @@ import { Teacher, addTeacher, getTeachers, updateTeacher } from '@/services/teac
 import { useAuth } from '@/hooks/use-auth';
 
 function AddEditTeacherDialog({ mode, teacher, onTeacherUpdated }: { mode: 'add' | 'edit', teacher?: Teacher, onTeacherUpdated: () => void }) {
-    const [name, setName] = useState(teacher?.name || '');
-    const [email, setEmail] = useState(teacher?.email || '');
-    const [password, setPassword] = useState('');
-    const [employeeId, setEmployeeId] = useState(teacher?.employeeId || '');
-    const [phone, setPhone] = useState(teacher?.phone || '');
-    const [gender, setGender] = useState(teacher?.gender || '');
-    const [status, setStatus] = useState(teacher?.status || 'Active');
     const [isLoading, setIsLoading] = useState(false);
     const [open, setOpen] = useState(false);
     const { toast } = useToast();
     const { signUp, setRole } = useAuth();
     
+    // Form state
+    const [formData, setFormData] = useState({
+        name: '',
+        email: '',
+        password: '',
+        employeeId: '',
+        phone: '',
+        department: '',
+        specialization: '',
+        joiningDate: '',
+    });
+
     const title = mode === 'add' ? 'Add New Teacher' : `Edit ${teacher?.name}`;
     const buttonText = mode === 'add' ? 'Add Teacher' : 'Save Changes';
 
+    useEffect(() => {
+        if (open) {
+            setFormData({
+                name: teacher?.name || '',
+                email: teacher?.email || '',
+                password: '',
+                employeeId: teacher?.employeeId || '',
+                phone: teacher?.phone || '',
+                department: teacher?.department || '',
+                specialization: teacher?.specialization || '',
+                joiningDate: teacher?.joiningDate ? new Date(teacher.joiningDate).toISOString().split('T')[0] : '',
+            });
+        }
+    }, [open, teacher]);
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { id, value } = e.target;
+        setFormData(prev => ({ ...prev, [id]: value }));
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        const { name, email, password, employeeId, phone, department, specialization, joiningDate } = formData;
+        
         if (!name || !email || !employeeId || (mode === 'add' && !password)) {
             toast({ variant: 'destructive', title: 'Error', description: 'Please fill out all required fields.' });
             return;
         }
         setIsLoading(true);
-        const teacherData = { name, email, employeeId, phone, gender, status, role: 'teacher' as const };
+
         try {
             if (mode === 'add') {
                 const { user } = await signUp(email, password);
                 await setRole(user.uid, 'teacher');
+                const teacherData = { 
+                    name, 
+                    email, 
+                    employeeId, 
+                    phone, 
+                    department, 
+                    specialization,
+                    joiningDate: new Date(joiningDate).getTime(),
+                    assignedClasses: [],
+                    role: 'teacher' as const
+                };
                 await addTeacher(user.uid, teacherData);
                 toast({ title: 'Success', description: 'Teacher added and user account created.' });
             } else if (teacher) {
+                 const teacherData = { 
+                    name, 
+                    email, 
+                    employeeId, 
+                    phone, 
+                    department, 
+                    specialization,
+                    joiningDate: new Date(joiningDate).getTime(),
+                };
                 await updateTeacher(teacher.id, teacherData);
                 toast({ title: 'Success', description: 'Teacher details updated.' });
             }
@@ -72,18 +119,6 @@ function AddEditTeacherDialog({ mode, teacher, onTeacherUpdated }: { mode: 'add'
             setIsLoading(false);
         }
     };
-    
-    useEffect(() => {
-        if(open) {
-            setName(teacher?.name || '');
-            setEmail(teacher?.email || '');
-            setEmployeeId(teacher?.employeeId || '');
-            setPhone(teacher?.phone || '');
-            setGender(teacher?.gender || '');
-            setStatus(teacher?.status || 'Active');
-            setPassword('');
-        }
-    }, [open, teacher]);
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
@@ -99,74 +134,28 @@ function AddEditTeacherDialog({ mode, teacher, onTeacherUpdated }: { mode: 'add'
                     </DropdownMenuItem>
                 )}
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px]">
+            <DialogContent className="sm:max-w-3xl">
                 <form onSubmit={handleSubmit}>
                     <DialogHeader>
                         <DialogTitle>{title}</DialogTitle>
-                         <DialogDescription>Create a new teacher profile and their login credentials.</DialogDescription>
+                         <DialogDescription>Create or update a teacher's profile and login credentials.</DialogDescription>
                     </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="name">Full Name</Label>
-                                <Input id="name" value={name} onChange={e => setName(e.target.value)} />
-                            </div>
-                             <div className="space-y-2">
-                                <Label htmlFor="employeeId">Employee ID</Label>
-                                <Input id="employeeId" value={employeeId} onChange={e => setEmployeeId(e.target.value)} />
-                            </div>
-                        </div>
+                    <div className="grid gap-6 py-4 max-h-[70vh] overflow-y-auto pr-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="email">Email</Label>
-                                <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} />
-                            </div>
-                            {mode === 'add' && (
-                                <div className="space-y-2">
-                                    <Label htmlFor="password">Password</Label>
-                                    <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} />
-                                </div>
-                            )}
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="phone">Phone Number (Optional)</Label>
-                                <Input id="phone" value={phone} onChange={e => setPhone(e.target.value)} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="gender">Gender (Optional)</Label>
-                                 <Select onValueChange={setGender} value={gender}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select gender" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="Male">Male</SelectItem>
-                                        <SelectItem value="Female">Female</SelectItem>
-                                        <SelectItem value="Other">Other</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </div>
-                         <div className="space-y-2">
-                            <Label htmlFor="status">Status</Label>
-                             <Select onValueChange={setStatus} value={status}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select status" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="Active">Active</SelectItem>
-                                    <SelectItem value="Resigned">Resigned</SelectItem>
-                                    <SelectItem value="Suspended">Suspended</SelectItem>
-                                </SelectContent>
-                            </Select>
+                           <div className="space-y-2"><Label htmlFor="name">Full Name</Label><Input id="name" value={formData.name} onChange={handleInputChange}/></div>
+                           <div className="space-y-2"><Label htmlFor="employeeId">Employee ID</Label><Input id="employeeId" value={formData.employeeId} onChange={handleInputChange}/></div>
+                           <div className="space-y-2"><Label htmlFor="email">Email</Label><Input id="email" type="email" value={formData.email} onChange={handleInputChange} disabled={mode === 'edit'}/></div>
+                           {mode === 'add' && <div className="space-y-2"><Label htmlFor="password">Password</Label><Input id="password" type="password" value={formData.password} onChange={handleInputChange}/></div>}
+                           <div className="space-y-2"><Label htmlFor="phone">Phone Number</Label><Input id="phone" value={formData.phone} onChange={handleInputChange}/></div>
+                           <div className="space-y-2"><Label htmlFor="department">Department</Label><Input id="department" value={formData.department} onChange={handleInputChange} placeholder="e.g. Computer Science"/></div>
+                           <div className="space-y-2"><Label htmlFor="specialization">Specialization</Label><Input id="specialization" value={formData.specialization} onChange={handleInputChange} placeholder="e.g. Machine Learning"/></div>
+                           <div className="space-y-2"><Label htmlFor="joiningDate">Joining Date</Label><Input id="joiningDate" type="date" value={formData.joiningDate} onChange={handleInputChange}/></div>
                         </div>
                     </div>
                     <DialogFooter>
-                        <DialogClose asChild>
-                            <Button type="button" variant="outline">Cancel</Button>
-                        </DialogClose>
+                        <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
                         <Button type="submit" disabled={isLoading}>
-                            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                             {buttonText}
                         </Button>
                     </DialogFooter>
@@ -175,6 +164,7 @@ function AddEditTeacherDialog({ mode, teacher, onTeacherUpdated }: { mode: 'add'
         </Dialog>
     );
 }
+
 
 function AddDegreeDialog({ onDegreeAdded }: { onDegreeAdded: () => void }) {
     const [name, setName] = useState('');
@@ -793,15 +783,6 @@ export default function AdminPage() {
         setIsStreamsDialogOpen(false); 
         setIsBatchesDialogOpen(true);
     };
-    
-    const getStatusVariant = (status: Teacher['status']) => {
-        switch (status) {
-            case 'Active': return 'default';
-            case 'Resigned': return 'secondary';
-            case 'Suspended': return 'destructive';
-            default: return 'outline';
-        }
-    }
 
     return (
         <div className="flex flex-col gap-8">
@@ -898,14 +879,15 @@ export default function AdminPage() {
                                         <TableHead>Name</TableHead>
                                         <TableHead>Employee ID</TableHead>
                                         <TableHead>Email</TableHead>
-                                        <TableHead>Status</TableHead>
+                                        <TableHead>Department</TableHead>
+                                        <TableHead>Joining Date</TableHead>
                                         <TableHead><span className="sr-only">Actions</span></TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {isLoadingTeachers ? (
                                          <TableRow>
-                                            <TableCell colSpan={5} className="text-center">
+                                            <TableCell colSpan={6} className="text-center">
                                                 <div className="flex justify-center items-center">
                                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                                     Loading teachers...
@@ -918,9 +900,8 @@ export default function AdminPage() {
                                                 <TableCell className="font-medium">{teacher.name}</TableCell>
                                                 <TableCell>{teacher.employeeId}</TableCell>
                                                 <TableCell>{teacher.email}</TableCell>
-                                                <TableCell>
-                                                    <Badge variant={getStatusVariant(teacher.status)}>{teacher.status}</Badge>
-                                                </TableCell>
+                                                <TableCell>{teacher.department}</TableCell>
+                                                <TableCell>{new Date(teacher.joiningDate).toLocaleDateString()}</TableCell>
                                                 <TableCell className='text-right'>
                                                     <DropdownMenu>
                                                         <DropdownMenuTrigger asChild>
@@ -938,7 +919,7 @@ export default function AdminPage() {
                                         ))
                                     ) : (
                                          <TableRow>
-                                            <TableCell colSpan={5} className="text-center">No teachers found. Add one to get started.</TableCell>
+                                            <TableCell colSpan={6} className="text-center">No teachers found. Add one to get started.</TableCell>
                                         </TableRow>
                                     )}
                                 </TableBody>
@@ -988,5 +969,3 @@ export default function AdminPage() {
         </div>
     );
 }
-
-    
