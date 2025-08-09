@@ -51,9 +51,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (userRoleDoc.exists()) {
           setRole(userRoleDoc.data().role);
         } else {
-           // This handles first-time sign-ins where role is not yet set
-           // The role is usually set explicitly right after account creation.
-           // Defaulting to student as a fallback.
             const initialRole = user.email === ADMIN_EMAIL ? 'admin' : 'student';
             await setRoleInFirestore(user.uid, initialRole, user.email || undefined);
             setRole(initialRole);
@@ -77,14 +74,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } catch (error) {
           console.error("Error setting user role:", error);
           toast({ variant: 'destructive', title: 'Error', description: 'Could not set user role.' });
-          throw error; // Re-throw to be caught by the calling function
+          throw error;
       }
   };
 
   const signUp = async (email: string, password: string) => {
     await setPersistence(auth, browserLocalPersistence);
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    // Role is set explicitly by the function that calls signUp (e.g., in AddEditTeacherDialog)
     return userCredential;
   }
 

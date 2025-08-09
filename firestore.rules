@@ -1,25 +1,32 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
+
     function isAdmin() {
+      // Check if the user is authenticated and has the 'admin' role in their user document.
       return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // Users collection can be read by any authenticated user, but only written by the user themselves or an admin.
-    // This allows a user to have their role set upon creation.
+    // Rules for the users collection
     match /users/{userId} {
-      allow read: if request.auth != null;
+      // Allow users to read their own document. Admins can read any user document.
+      allow read: if request.auth.uid == userId || isAdmin();
+      // Allow users to create their own document (on signup). Admins can write to any user document.
       allow write: if request.auth.uid == userId || isAdmin();
     }
 
-    // All collections under a specific college can be written to by an admin.
-    // All authenticated users can read this data.
+    // Rules for all collections under a specific college
     match /colleges/{collegeId}/{document=**} {
-      allow read: if request.auth != null;
-      allow write: if isAdmin();
+        // Allow any authenticated user to read data (e.g., degrees, events, notices).
+        allow read: if request.auth != null;
+        // Allow only admins to write data (e.g., create degrees, add employees).
+        allow write: if isAdmin();
+    }
+
+    // Default catch-all to deny all other reads/writes for security.
+    match /{path=**} {
+      allow read, write: if false;
     }
   }
 }

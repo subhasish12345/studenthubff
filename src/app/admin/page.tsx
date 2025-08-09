@@ -75,7 +75,10 @@ function AddEditTeacherDialog({ mode, teacher, onTeacherUpdated }: { mode: 'add'
         try {
             if (mode === 'add') {
                 const userCredential = await signUp(email, password);
-                await setRole(userCredential.user.uid, 'teacher', email);
+                const uid = userCredential.user.uid;
+                
+                await setRole(uid, 'teacher', email);
+                
                 const teacherData = { 
                     name,
                     employeeId, 
@@ -83,8 +86,10 @@ function AddEditTeacherDialog({ mode, teacher, onTeacherUpdated }: { mode: 'add'
                     department, 
                     specialization,
                     joiningDate: new Date(joiningDate).getTime(),
+                    assignedClasses: [],
                 };
-                await addTeacher(userCredential.user.uid, teacherData);
+
+                await addTeacher(uid, teacherData);
                 toast({ title: 'Success', description: 'Teacher added and user account created.' });
             } else if (teacher) {
                  const teacherData = { 

@@ -25,7 +25,7 @@ export interface Teacher {
   role: 'teacher';
 }
 
-type TeacherFirestoreData = Omit<Teacher, 'id' | 'joiningDate'> & {
+type TeacherFirestoreData = Omit<Teacher, 'id' | 'joiningDate' | 'email' | 'role'> & {
     joiningDate: Timestamp;
 };
 
@@ -46,7 +46,7 @@ export const addTeacher = async (uid: string, teacherData: Omit<Teacher, 'id' | 
 
     const teacherRef = doc(db, 'colleges', COLLEGE_ID, 'teachers', uid);
 
-    const firestoreData: Omit<TeacherFirestoreData, 'role'> & { email: string; role: 'teacher' } = {
+    const firestoreData = {
         ...teacherData,
         email: userEmail,
         joiningDate: Timestamp.fromMillis(teacherData.joiningDate),
