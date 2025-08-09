@@ -1,6 +1,6 @@
 
 import { db } from '@/lib/firebase';
-import { collection, getDocs, doc, setDoc, query, orderBy, updateDoc, Timestamp, getDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, query, orderBy, updateDoc, Timestamp, getDoc, deleteDoc } from 'firebase/firestore';
 
 const COLLEGE_ID = 'GEC';
 
